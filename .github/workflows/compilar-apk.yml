@@ -31,16 +31,10 @@ jobs:
     - name: Instalar Cordova
       run: npm install -g cordova
 
-    - name: Crear Configuración Base de Cordova
-      run: |
-        echo '<?xml version="1.0" encoding="UTF-8"?><widget></widget>' > config.xml
-
-    - name: Crear Plataforma Android
-      run: |
-        cordova platform add android --nobuild
-        
     - name: Compilar APK de Depuración (Debug)
-      run: cordova build android --debug
+      run: |
+        cordova platform add android
+        cordova build android --debug
 
     - name: Guardar APK como Archivo Descargable
       uses: actions/upload-artifact@v4
