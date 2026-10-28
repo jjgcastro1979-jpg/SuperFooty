@@ -1,0 +1,52 @@
+name: Compilar APK Limpia
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar Código del Repositorio
+      uses: actions/checkout@v4
+
+    - name: Configurar Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Configurar Gradle Oficial Compatible
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.7'
+
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Instalar Cordova Globalmente
+      run: npm install -g cordova
+
+    - name: Configurar Proyecto e Instalar Plugins
+      run: |
+        cordova platform add android --nobuild
+        cordova plugin add cordova-plugin-whitelist || true
+
+    - name: Compilar APK de Depuración (Debug)
+      run: |
+        cordova build android --debug
+
+    - name: Guardar APK como Archivo Descargable
+      uses: actions/upload-artifact@v4
+      with:
+        name: App-Apuestas-Deportivas
+        path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
