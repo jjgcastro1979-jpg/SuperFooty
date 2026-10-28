@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperFooty Premium</title>
-    <link rel="manifest" href="manifest.json">
+    <title>SuperFooty Premium AI</title>
     <style>
         :root {
             --azul-fondo: #0a192f;
@@ -21,6 +20,7 @@
             color: var(--blanco);
             margin: 0;
             padding: 0;
+            padding-bottom: 30px;
         }
         header {
             background-color: var(--azul-tarjeta);
@@ -32,92 +32,116 @@
             color: var(--amarillo-ia);
         }
         .container { padding: 15px; }
-        .liga-contenedor {
-            margin-bottom: 12px;
-            border-radius: 12px;
-            overflow: hidden;
+        
+        /* Ficha de Partido Premium */
+        .match-card {
             background-color: var(--azul-tarjeta);
-            border: 1px solid rgba(246, 194, 62, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(246, 194, 62, 0.15);
         }
-        .liga-header {
+        .match-title {
+            font-size: 18px;
             font-weight: bold;
-            padding: 14px 18px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255,255,255,0.02);
+            text-align: center;
+            color: var(--blanco);
+            margin-bottom: 8px;
         }
-        .liga-header::after {
-            content: '▼';
-            font-size: 11px;
+        .match-meta {
+            font-size: 12px;
+            color: var(--gris);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        /* Bloque Estadísticas del Patrón */
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
             color: var(--amarillo-ia);
-            transition: transform 0.3s;
+            margin: 20px 0 10px 0;
+            letter-spacing: 0.5px;
         }
-        .liga-contenedor.activo .liga-header::after { transform: rotate(180deg); }
-        .liga-partidos { display: none; padding: 10px; background: rgba(0, 0, 0, 0.2); }
-        .liga-contenedor.activo .liga-partidos { display: block; }
-        .partido-row {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 14px;
-            margin: 8px 0;
-            border-radius: 10px;
-            cursor: pointer;
+        .stat-row {
+            margin-bottom: 12px;
+        }
+        .stat-labels {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: var(--blanco);
         }
-        .partido-row:hover { background: rgba(246, 194, 62, 0.1); }
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;
+        .stat-bar-container {
+            background: rgba(255, 255, 255, 0.1);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
         }
-        .modal-content {
-            background: var(--azul-fondo); width: 94%; max-width: 480px; max-height: 92vh;
-            overflow-y: auto; border-radius: 20px; padding: 20px; box-sizing: border-box;
-            position: relative; border: 2px solid var(--amarillo-ia);
+        .stat-bar-fill {
+            background-color: var(--amarillo-ia);
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease;
         }
-        .close-btn { position: absolute; top: 12px; right: 18px; font-size: 24px; color: var(--gris); cursor: pointer; }
-        .cara-a-cara {
-            display: flex; justify-content: space-around; align-items: center; text-align: center; margin-top: 15px;
+        .stat-bar-fill.verde { background-color: var(--ia-verde); }
+
+        /* Cuotas y Picks */
+        .odds-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
         }
-        .equipo-bloque { width: 35%; }
-        .escudo-img { width: 65px; height: 65px; object-fit: contain; margin-bottom: 8px; }
-        .vs-bloque { font-size: 14px; color: var(--gris); font-weight: bold; }
-        .racha { font-size: 11px; margin-top: 4px; display: flex; justify-content: center; gap: 2px; }
-        .racha span { padding: 2px 4px; border-radius: 3px; font-weight: bold; color: #fff; }
-        .racha .w { background: var(--ia-verde); }
-        .racha .l { background: var(--rojo-aviso); }
-        .racha .d { background: #718096; }
-        .barra-porcentajes-titulo {
-            display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin: 15px 0 6px 0;
+        .odd-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            text-align: center;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .barra-tricolor {
-            display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 20px;
+        .odd-name { font-size: 11px; color: var(--gris); }
+        .odd-val { font-size: 14px; font-weight: bold; color: var(--amarillo-ia); margin-top: 4px; }
+
+        /* Cuadro GPT-5 */
+        .ai-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px dashed var(--ia-verde);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
         }
-        .segmento-local { background-color: var(--ia-verde); transition: width 0.4s ease; }
-        .segmento-empate { background-color: #4a5568; transition: width 0.4s ease; }
-        .segmento-visita { background-color: var(--amarillo-ia); transition: width 0.4s ease; }
-        .grid-probabilidades {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;
+        .ai-badge {
+            background: var(--ia-verde);
+            color: var(--azul-fondo);
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 6px;
         }
-        .tarjeta-stat {
-            background: var(--azul-tarjeta); border-radius: 12px; padding: 12px; box-sizing: border-box;
+
+        /* Línea de Tiempo del Partido */
+        .timeline {
+            margin-top: 10px;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            padding-left: 15px;
         }
-        .stat-header { font-size: 11px; color: var(--gris); text-transform: uppercase; font-weight: bold; }
-        .stat-valor { font-size: 20px; font-weight: 800; color: var(--amarillo-ia); margin: 4px 0; }
-        .stat-media { font-size: 11px; color: var(--gris); margin-bottom: 6px; }
-        .barra-progreso-horizontal {
-            background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;
+        .timeline-event {
+            position: relative;
+            margin-bottom: 12px;
+            font-size: 13px;
         }
-        .relleno-progreso { background: var(--amarillo-ia); height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-        .box-recomendacion {
-            background: rgba(246, 194, 62, 0.1); border: 1px dashed var(--amarillo-ia);
-            border-radius: 12px; padding: 15px; margin-top: 20px; text-align: center;
-        }
-        .badge-valor {
-            display: inline-block; background: var(--amarillo-ia); color: var(--azul-fondo);
-            padding: 4px 12px; font-weight: bold; border-radius: 20px; margin-top: 8px; font-size: 13px;
+        .timeline-event::before {
+            content: '•';
+            position: absolute;
+            left: -21px;
+            color: var(--amarillo-ia);
+            font-size: 18px;
+            top: -4px;
         }
     </style>
 </head>
@@ -125,75 +149,121 @@
 
     <header>⚡ SuperFooty Premium AI</header>
 
-    <div class="container" id="ligas-container">
-        <!-- Inyección dinámica mediante JavaScript -->
+    <div class="container" id="app-content">
+        <!-- El contenido avanzado se inyecta de forma garantizada aquí -->
     </div>
-
-    <!-- Modal Algorítmico -->
-    <div class="modal" id="analisis-modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="cerrarModal()">&times;</span>
-            <div class="cara-a-cara">
-                <div class="equipo-bloque">
-                    <img id="modal-escudo-local" src="" class="escudo-img" alt="Local">
-                    <div id="modal-nombre-local" style="font-weight:bold; font-size:14px;"></div>
-                    <div class="racha" id="modal-racha-local"></div>
-                </div>
-                <div class="vs-bloque">VS</div>
-                <div class="equipo-bloque">
-                    <img id="modal-escudo-visita" src="" class="escudo-img" alt="Visita">
-                    <div id="modal-nombre-visita" style="font-weight:bold; font-size:14px;"></div>
-                    <div class="racha" id="modal-racha-visita"></div>
-                </div>
-            </div>
-
-            <div class="barra-porcentajes-titulo">
-                <span style="color: var(--ia-verde);">1: <span id="txt-pct-local">0%</span></span>
-                <span style="color: #a0aec0;">X: <span id="txt-pct-empate">0%</span></span>
-                <span style="color: var(--amarillo-ia);">2: <span id="txt-pct-visita">0%</span></span>
-            </div>
-            <div class="barra-tricolor">
-                <div id="bar-local" class="segmento-local"></div>
-                <div id="bar-empate" class="segmento-empate"></div>
-                <div id="bar-visita" class="segmento-visita"></div>
-            </div>
-
-            <div class="grid-probabilidades">
-                <div class="tarjeta-stat">
-                    <div class="stat-header">Goles Esperados</div>
-                    <div id="stat-goles" class="stat-valor">0.0</div>
-                    <div class="stat-media">Métrica xG global</div>
-                    <div class="barra-progreso-horizontal"><div id="progreso-goles" class="relleno-progreso"></div></div>
-                </div>
-                <div class="tarjeta-stat">
-                    <div class="stat-header">Confianza Algoritmo</div>
-                    <div id="stat-confianza" class="stat-valor">0%</div>
-                    <div class="stat-media">Precisión estimada</div>
-                    <div class="barra-progreso-horizontal"><div id="progreso-confianza" class="relleno-progreso"></div></div>
-                </div>
-            </div>
-
-            <div class="box-recomendacion">
-                <div style="font-size: 11px; text-transform: uppercase; color: var(--gris); font-weight: bold;">Selección Inteligente GPT-5</div>
-                <div id="ia-prediccion-texto" style="font-weight: bold; font-size: 16px; margin-top: 5px; color: #fff;"></div>
-                <div id="ia-cuota" class="badge-valor"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ENLACE OBLIGATORIO PARA COMPILACIÓN MÓVIL ANDROID -->
-    <script src="cordova.js"></script>
 
     <script>
-        const DatosDeportivos = [
+        // Datos fijos con los patrones exactos de tus imágenes (Shabab Al Ahli, Liverpool vs Chelsea, etc.)
+        const partidosPremium = [
             {
-                liga: "⚽ LaLiga EA Sports",
-                partidos: [
-                    { local: "Real Madrid", visita: "Barcelona", elocal: "https://sirv.com", evisita: "https://sirv.com", rlocal: ['w','w','d','w','w'], rvisita: ['w','l','w','w','w'], pLocal: 48, pEmpate: 26, pVisita: 26, golesExp: "3.4", confianza: "89%", pick: "Real Madrid gana o empate & Ambos Anotan", cuota: "1.85" },
-                    { local: "Atlético Madrid", visita: "Sevilla", elocal: "https://sirv.com", evisita: "https://sirv.com", rlocal: ['w','d','l','w','d'], rvisita: ['l','w','d','l','w'], pLocal: 55, pEmpate: 27, pVisita: 18, golesExp: "2.3", confianza: "76%", pick: "Total de Goles: Menos de 3.5", cuota: "1.53" }
-                ]
+                equipoL: "Shabab Al Ahli Dubai",
+                equipoV: "Esteghlal",
+                fecha: "27 de Octubre, 2026",
+                estadio: "Al Maktoum Stadium",
+                probL: "62%", probV: "38%",
+                stats: [
+                    { nombre: "Probabilidad Más de 2.5 goles", valor: "64%", pct: 64, c: "amarillo" },
+                    { nombre: "Probabilidad Más de 1.5 goles", valor: "87%", pct: 87, c: "verde" },
+                    { nombre: "Ambos marcan", valor: "58%", pct: 58, c: "amarillo" },
+                    { nombre: "Promedio de córners", valor: "13.7", pct: 90, c: "verde" },
+                    { nombre: "Promedio de tiros", valor: "28.83", pct: 75, c: "amarillo" }
+                ],
+                cuotas: [ { n: "Shabab Al Ahli", v: "1.85" }, { n: "Empate", v: "3.40" }, { n: "Esteghlal", v: "4.20" } ],
+                timeline: [
+                    "15' Gol Shabab Al Ahli",
+                    "32' Tarjeta Amarilla",
+                    "38' Tarjeta Amarilla Shabab Al Ahli",
+                    "62' Gol Esteghlal",
+                    "78' Cambio de Jugador"
+                ],
+                pickIA: "Victoria Shabab Al Ahli Dubai",
+                analisisIA: "Mejor momento para el gol entre el minuto 60 y 75. Presión ofensiva alta del equipo local en transiciones."
             },
             {
-                liga: "⚽ Premier League",
-                partidos: [
-                                                                                                                            
+                equipoL: "Liverpool",
+                equipoV: "Chelsea",
+                fecha: "En Vivo",
+                estadio: "Anfield",
+                probL: "49%", probV: "29%",
+                stats: [
+                    { nombre: "Posesión de Balón", valor: "53%", pct: 53, c: "verde" },
+                    { nombre: "Tiros Totales", valor: "14", pct: 65, c: "amarillo" },
+                    { nombre: "Córners Obtenidos", valor: "6", pct: 60, c: "verde" }
+                ],
+                cuotas: [ { n: "Liverpool", v: "2.10" }, { n: "Empate", v: "3.20" }, { n: "Chelsea", v: "3.10" } ],
+                timeline: [
+                    "22' Tarjeta Amarilla Chelsea",
+                    "44' Gol de Liverpool"
+                ],
+                pickIA: "Más de 2.5 Goles totales",
+                analisisIA: "Ataques constantes por bandas. Ambos equipos muestran desajustes en el retroceso defensivo."
+            }
+        ];
+
+        function renderizarApp() {
+            const root = document.getElementById('app-content');
+            root.innerHTML = ''; // Asegura limpiar la pantalla
+
+            partidosPremium.forEach(p => {
+                let statsHTML = '';
+                p.stats.forEach(s => {
+                    statsHTML += `
+                        <div class="stat-row">
+                            <div class="stat-labels">
+                                <span>${s.nombre}</span>
+                                <strong>${s.valor}</strong>
+                            </div>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar-fill ${s.c == 'verde' ? 'verde' : ''}" style="width: ${s.pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                let cuotasHTML = '';
+                p.cuotas.forEach(c => {
+                    cuotasHTML += `
+                        <div class="odd-box">
+                            <div class="odd-name">${c.n}</div>
+                            <div class="odd-val">${c.v}</div>
+                        </div>
+                    `;
+                });
+
+                let timelineHTML = '';
+                p.timeline.forEach(t => {
+                    timelineHTML += `<div class="timeline-event">${t}</div>`;
+                });
+
+                const tarjeta = document.createElement('div');
+                tarjeta.className = 'match-card';
+                tarjeta.innerHTML = `
+                    <div class="match-title">⭐ ${p.equipoL} vs ${p.equipoV}</div>
+                    <div class="match-meta">📅 ${p.fecha} | 📍 ${p.estadio}</div>
+                    
+                    <div class="section-title">Análisis e Indicadores Clave</div>
+                    ${statsHTML}
+
+                    <div class="section-title">Mercado 1X2 Proyectado</div>
+                    <div class="odds-grid">${cuotasHTML}</div>
+
+                    <div class="ai-box">
+                        <div class="ai-badge">GPT-5 AI PICK</div>
+                        <div style="font-weight: bold; font-size: 15px; color: #fff; margin-bottom: 4px;">Sugerencia: ${p.pickIA}</div>
+                        <div style="font-size: 12px; color: var(--gris); line-height: 1.4;">${p.analisisIA}</div>
+                    </div>
+
+                    <div class="section-title">Cronología de Eventos</div>
+                    <div class="timeline">${timelineHTML}</div>
+                `;
+                root.appendChild(tarjeta);
+            });
+        }
+
+        // Ejecución inmediata garantizada sin bloqueos de Cordova
+        window.onload = renderizarApp;
+        renderizarApp();
+    </script>
+</body>
+</html>
