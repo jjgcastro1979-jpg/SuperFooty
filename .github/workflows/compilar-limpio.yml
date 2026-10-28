@@ -36,15 +36,19 @@ jobs:
     - name: Instalar Cordova Globalmente
       run: npm install -g cordova
 
-    - name: Configurar Proyecto e Instalar Plugins
+    - name: Configurar Proyecto e Inyectar Ajustes de Red
       run: |
         cordova platform add android --nobuild
         cordova plugin add cordova-plugin-whitelist || true
+        # Reparación nativa de la configuración para evitar fallos de Gradle
+        sed -i 's/usesCleartextTraffic="true"/android:usesCleartextTraffic="true"/g' platforms/android/app/src/main/AndroidManifest.xml || true
 
-    - name: Compilar APK de Depuración (Debug)
+    - name: Forzar Limpieza y Compilación de Android (Solución Definitiva)
       run: |
-        cordova build android --debug
-
+        cd platforms/android && ./gradlew clean || true
+        cd ../..
+        cordova build android --debug -- --max-workers=2
+        
     - name: Guardar APK como Archivo Descargable
       uses: actions/upload-artifact@v4
       with:
