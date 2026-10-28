@@ -28,13 +28,18 @@ jobs:
       with:
         node-version: 20
 
-    - name: Instalar Cordova
+    - name: Instalar Cordova Globalmente
       run: npm install -g cordova
+
+    - name: Configurar Proyecto e Instalar Plugins de Red
+      run: |
+        cordova platform add android --nobuild
+        cordova plugin add cordova-plugin-whitelist || true
+        cordova plugin add cordova-plugin-android-permissions || true
 
     - name: Compilar APK de Depuración (Debug)
       run: |
-        cordova platform add android
-        cordova build android --debug
+        cordova build android --debug -- --packageID=com.superfooty.premium
 
     - name: Guardar APK como Archivo Descargable
       uses: actions/upload-artifact@v4
