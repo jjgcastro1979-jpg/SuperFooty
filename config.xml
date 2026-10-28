@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.superfooty.premium" version="1.0.0" xmlns="http://w3.org" xmlns:cdv="http://apache.org">
+    <name>SuperFooty</name>
+    <description>Análisis avanzado de fútbol en tiempo real con IA.</description>
+    <author email="soporte@tuweb.com" href="http://github.com">SuperFooty Team</author>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <preference name="Orientation" value="portrait" />
+</widget>
