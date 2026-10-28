@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperFooty Premium</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --azul-fondo: #0a192f;
+            --azul-tarjeta: #172a45;
+            --amarillo-ia: #f6c23e;
+            --blanco: #ffffff;
+            --gris: #8892b0;
+            --ia-verde: #10b981;
+            --rojo-aviso: #ef4444;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--azul-fondo);
+            color: var(--blanco);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--azul-tarjeta);
+            border-bottom: 2px solid var(--amarillo-ia);
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: var(--amarillo-ia);
+        }
+        .container { padding: 15px; }
+        .liga-contenedor {
+            margin-bottom: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: var(--azul-tarjeta);
+            border: 1px solid rgba(246, 194, 62, 0.1);
+        }
+        .liga-header {
+            font-weight: bold;
+            padding: 14px 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .liga-header::after {
+            content: '▼';
+            font-size: 11px;
+            color: var(--amarillo-ia);
+            transition: transform 0.3s;
+        }
+        .liga-contenedor.activo .liga-header::after { transform: rotate(180deg); }
+        .liga-partidos { display: none; padding: 10px; background: rgba(0, 0, 0, 0.2); }
+        .liga-contenedor.activo .liga-partidos { display: block; }
+        .partido-row {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 14px;
+            margin: 8px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .partido-row:hover { background: rgba(246, 194, 62, 0.1); }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--azul-fondo); width: 94%; max-width: 480px; max-height: 92vh;
+            overflow-y: auto; border-radius: 20px; padding: 20px; box-sizing: border-box;
+            position: relative; border: 2px solid var(--amarillo-ia);
+        }
+        .close-btn { position: absolute; top: 12px; right: 18px; font-size: 24px; color: var(--gris); cursor: pointer; }
+        .cara-a-cara {
+            display: flex; justify-content: space-around; align-items: center; text-align: center; margin-top: 15px;
+        }
+        .equipo-bloque { width: 35%; }
+        .escudo-img { width: 65px; height: 65px; object-fit: contain; margin-bottom: 8px; }
+        .vs-bloque { font-size: 14px; color: var(--gris); font-weight: bold; }
+        .racha { font-size: 11px; margin-top: 4px; display: flex; justify-content: center; gap: 2px; }
+        .racha span { padding: 2px 4px; border-radius: 3px; font-weight: bold; color: #fff; }
+        .racha .w { background: var(--ia-verde); }
+        .racha .l { background: var(--rojo-aviso); }
+        .racha .d { background: #718096; }
+        .barra-porcentajes-titulo {
+            display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin: 15px 0 6px 0;
+        }
+        .barra-tricolor {
+            display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 20px;
+        }
+        .segmento-local { background-color: var(--ia-verde); transition: width 0.4s ease; }
+        .segmento-empate { background-color: #4a5568; transition: width 0.4s ease; }
+        .segmento-visita { background-color: var(--amarillo-ia); transition: width 0.4s ease; }
+        .grid-probabilidades {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;
+        }
+        .tarjeta-stat {
+            background: var(--azul-tarjeta); border-radius: 12px; padding: 12px; box-sizing: border-box;
+        }
+        .stat-header { font-size: 11px; color: var(--gris); text-transform: uppercase; font-weight: bold; }
+        .stat-valor { font-size: 20px; font-weight: 800; color: var(--amarillo-ia); margin: 4px 0; }
+        .stat-media { font-size: 11px; color: var(--gris); margin-bottom: 6px; }
+        .barra-progreso-horizontal {
+            background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; overflow: hidden;
+        }
+        .relleno-progreso { background: var(--amarillo-ia); height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+        .box-recomendacion {
+            background: rgba(246, 194, 62, 0.1); border: 1px dashed var(--amarillo-ia);
+            border-radius: 12px; padding: 15px; margin-top: 20px; text-align: center;
+        }
+        .badge-valor {
+            display: inline-block; background: var(--amarillo-ia); color: var(--azul-fondo);
+            padding: 4px 12px; font-weight: bold; border-radius: 20px; margin-top: 8px; font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>⚡ SuperFooty Premium AI</header>
+
+    <div class="container" id="ligas-container">
+        <!-- Inyección dinámica mediante JavaScript -->
+    </div>
+
+    <!-- Modal Algorítmico -->
+    <div class="modal" id="analisis-modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarModal()">&times;</span>
+            <div class="cara-a-cara">
+                <div class="equipo-bloque">
+                    <img id="modal-escudo-local" src="" class="escudo-img" alt="Local">
+                    <div id="modal-nombre-local" style="font-weight:bold; font-size:14px;"></div>
+                    <div class="racha" id="modal-racha-local"></div>
+                </div>
+                <div class="vs-bloque">VS</div>
+                <div class="equipo-bloque">
+                    <img id="modal-escudo-visita" src="" class="escudo-img" alt="Visita">
+                    <div id="modal-nombre-visita" style="font-weight:bold; font-size:14px;"></div>
+                    <div class="racha" id="modal-racha-visita"></div>
+                </div>
+            </div>
+
+            <div class="barra-porcentajes-titulo">
+                <span style="color: var(--ia-verde);">1: <span id="txt-pct-local">0%</span></span>
+                <span style="color: #a0aec0;">X: <span id="txt-pct-empate">0%</span></span>
+                <span style="color: var(--amarillo-ia);">2: <span id="txt-pct-visita">0%</span></span>
+            </div>
+            <div class="barra-tricolor">
+                <div id="bar-local" class="segmento-local"></div>
+                <div id="bar-empate" class="segmento-empate"></div>
+                <div id="bar-visita" class="segmento-visita"></div>
+            </div>
+
+            <div class="grid-probabilidades">
+                <div class="tarjeta-stat">
+                    <div class="stat-header">Goles Esperados</div>
+                    <div id="stat-goles" class="stat-valor">0.0</div>
+                    <div class="stat-media">Métrica xG global</div>
+                    <div class="barra-progreso-horizontal"><div id="progreso-goles" class="relleno-progreso"></div></div>
+                </div>
+                <div class="tarjeta-stat">
+                    <div class="stat-header">Confianza Algoritmo</div>
+                    <div id="stat-confianza" class="stat-valor">0%</div>
+                    <div class="stat-media">Precisión estimada</div>
+                    <div class="barra-progreso-horizontal"><div id="progreso-confianza" class="relleno-progreso"></div></div>
+                </div>
+            </div>
+
+            <div class="box-recomendacion">
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--gris); font-weight: bold;">Selección Inteligente GPT-5</div>
+                <div id="ia-prediccion-texto" style="font-weight: bold; font-size: 16px; margin-top: 5px; color: #fff;"></div>
+                <div id="ia-cuota" class="badge-valor"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DatosDeportivos = [
+            {
+                liga: "⚽ LaLiga EA Sports",
+                partidos: [
+                    { local: "Real Madrid", visita: "Barcelona", elocal: "https://sirv.com", evisita: "https://sirv.com", rlocal: ['w','w','d','w','w'], rvisita: ['w','l','w','w','w'], pLocal: 48, pEmpate: 26, pVisita: 26, golesExp: "3.4", confianza: "89%", pick: "Real Madrid gana o empate & Ambos Anotan", cuota: "1.85" },
+                    { local: "Atlético Madrid", visita: "Sevilla", elocal: "https://sirv.com", evisita: "https://sirv.com", rlocal: ['w','d','l','w','d'], rvisita: ['l','w','d','l','w'], pLocal: 55, pEmpate: 27, pVisita: 18, golesExp: "2.3", confianza: "76%", pick: "Total de Goles: Menos de 3.5", cuota: "1.53" }
+                ]
+            },
+            {
+                liga: "⚽ Premier League",
+                partidos: [
+                    { local: "Arsenal", visita: "Chelsea", elocal: "https://sirv.com", evisita: "https://sirv.com", rlocal: ['w','w','w','d','w'], rvisita: ['d','w','l','w','l'], pLocal: 61, pEmpate: 22, pVisita: 17, golesExp: "2.8", confianza: "84%", pick: "Ganador: Arsenal", cuota: "1.67" }
+                ]
+  
