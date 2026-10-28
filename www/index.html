@@ -144,7 +144,7 @@
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .odd-name { font-size: 11px; color: var(--gris); table-layout: fixed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .odd-name { font-size: 11px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .odd-val { font-size: 13px; font-weight: bold; color: var(--amarillo-ia); margin-top: 2px; }
         .ai-box {
             background: rgba(16, 185, 129, 0.08);
@@ -173,7 +173,7 @@
         <div id="vista-lista">
             <div class="live-title">
                 <span>📅 Partidos de Hoy Real-Time</span>
-                <span id="contador-partidos" style="font-size:12px; color:var(--ia-verde);">Conectado</span>
+                <span id="contador-partidos" style="font-size:12px; color:var(--ia-verde);">Conectando...</span>
             </div>
             <div id="lista-partidos-real">
                 <div class="loading-text">Iniciando conexión con API-Sports...</div>
@@ -187,12 +187,16 @@
     </div>
 
     <script>
-        // Tu clave API Real e integración con los servidores v3 de api-football
         const miClaveAPI = 'a88e129dec6bcc4bf21155e950f91596';
         
-        // Obtener la fecha de hoy en formato AAAA-MM-DD de forma dinámica y automática
-        const hoy = new Date().toISOString().split('T')[0];
-        const endpointUrl = `https://api-football.com{hoy}`;
+        // Formatear fecha local actual YYYY-MM-DD de forma segura
+        const d = new Date();
+        const ye = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const da = String(d.getDate()).padStart(2, '0');
+        const fechaFormateada = `${ye}-${mo}-${da}`;
+        
+        const endpointUrl = `https://api-football.com{fechaFormateada}`;
 
         let partidosMundiales = [];
 
@@ -211,17 +215,18 @@
                 const listado = resultado.response;
 
                 if (!listado || listado.length === 0) {
-                    listaDiv.innerHTML = '<div class="loading-text">No hay partidos registrados para hoy en las ligas monitorizadas.</div>';
+                    listaDiv.innerHTML = '<div class="loading-text">No hay más partidos registrados para hoy en los servidores.</div>';
+                    document.getElementById('contador-partidos').innerText = "Online";
                     return;
                 }
 
-                // Filtrar solo las ligas más importantes del mundo para no saturar tus 100 consultas diarias gratis
+                // IDs de ligas principales (LaLiga=140, Premier=39, Serie A=135, Champions=2, etc.)
                 const ligasInteres =; 
-                partidosMundiales = listado.filter(p => ligasInteres.includes(p.league.id) || p.league.primary);
-
-                // Si no hay de las principales, mostrar los primeros 25 del día global
+                
+                // Intentar filtrar por ligas de interés, si no hay, sacar los primeros 30 globales de hoy
+                partidosMundiales = listado.filter(p => ligasInteres.includes(p.league.id));
                 if(partidosMundiales.length === 0) {
-                    partidosMundiales = listado.slice(0, 25);
+                    partidosMundiales = listado.slice(0, 30);
                 }
 
                 listaDiv.innerHTML = '';
@@ -236,7 +241,10 @@
                         listaDiv.appendChild(badge);
                     }
 
-                    const horaCorta = new Date(item.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    let horaCorta = "Pre";
+                    try {
+                        horaCorta = new Date(item.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    } catch(e){}
 
                     const fila = document.createElement('div');
                     fila.className = 'partido-fila-real';
@@ -255,17 +263,11 @@
 
             } catch (err) {
                 console.error(err);
-                listaDiv.innerHTML = '<div class="loading-text" style="color:var(--rojo-aviso)">Error al validar credenciales o sin internet en el móvil.</div>';
+                listaDiv.innerHTML = '<div class="loading-text" style="color:var(--rojo-aviso)">Error al conectar con la API de fútbol. Comprueba tu conexión.</div>';
+                document.getElementById('contador-partidos').innerText = "Error";
             }
         }
 
         function ejecutarAnalisisGPT5(idx) {
             const p = partidosMundiales[idx];
-            
-            // Lógica algorítmica de Inteligencia Artificial para el cálculo predictivo en base a cadenas únicas
-            const semilla = p.teams.home.name.length + p.teams.away.name.length;
-            const probL = 30 + (semilla % 35);
-            const probV = 85 - probL;
-            const probE = 100 - probL - probV;
-
-    
+                    
