@@ -1,6 +1,10 @@
+
 const API_KEY = '7103c2e016acb7d22fdf503a1dab45c9'; 
+const GROQ_API_KEY = 'gck_Achscu28ltE81lD5FPEzWGdyb3FYKvd3m3SCZG2UQQ16YxYugu7n'; 
+
 const API_HOST = 'https://v3.football.api-sports.io';
 
+// Poner fecha de hoy automáticamente
 document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date-select');
     const hoy = new Date();
@@ -12,6 +16,7 @@ function volverAtras() {
     document.getElementById('main-screen').style.display = 'block';
 }
 
+// 1. BUSCAR PARTIDOS (CON CACHÉ PARA AHORRAR PETICIONES)
 document.getElementById('fetch-btn').addEventListener('click', async () => {
     const leagueId = document.getElementById('league-select').value;
     const dateSelected = document.getElementById('date-select').value;
@@ -19,164 +24,168 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
     
     listDiv.innerHTML = '<div class="loader">Buscando partidos... ⏳</div>';
 
+    const cacheKey = `partidos_${leagueId}_${dateSelected}`;
+    const cachedData = localStorage.getItem(cacheKey);
+
+    // SI YA ESTÁ EN MEMORIA, LO USAMOS (AHORRAMOS 1 PETICIÓN)
+    if (cachedData) {
+        console.log("Usando caché local...");
+        renderizarLista(JSON.parse(cachedData));
+        return;
+    }
+
     try {
         const response = await fetch(`${API_HOST}/fixtures?league=${leagueId}&season=2023&date=${dateSelected}`, {
             method: 'GET', headers: { 'x-apisports-key': API_KEY }
         });
         const data = await response.json();
         
+        // Guardamos en caché si hay datos válidos
         if (data.response && data.response.length > 0) {
-            listDiv.innerHTML = data.response.map(match => {
-                const home = match.teams.home.name;
-                const away = match.teams.away.name;
-                const hora = new Date(match.fixture.date).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-                const matchId = match.fixture.id;
-
-                return `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="analizarPartido(${matchId})">
-                        <div style="text-align:left; width:40%; font-size:14px; font-weight:500;">${home}</div>
-                        <div style="text-align:center; width:20%; font-weight:bold; color:#666;">${hora}</div>
-                        <div style="text-align:right; width:40%; font-size:14px; font-weight:500;">${away}</div>
-                    </div>
-                `;
-            }).join('');
-        } else {
-            listDiv.innerHTML = '<p style="text-align:center;">No hay partidos de esta competición en esta fecha.</p>';
+            localStorage.setItem(cacheKey, JSON.stringify(data));
         }
+        
+        renderizarLista(data);
+
     } catch (error) {
-        listDiv.innerHTML = `<p style="color: red; text-align:center;">Error de conexión.</p>`;
+        listDiv.innerHTML = `<p style="color: red; text-align:center;">Error de conexión. Revisa tu clave API.</p>`;
     }
 });
 
-// FUNCIÓN QUE ANALIZA EL PARTIDO CON DATOS REALES DE PREDICCIÓN
-async function analizarPartido(matchId) {
+function renderizarLista(data) {
+    const listDiv = document.getElementById('results-list');
+    if (data.response && data.response.length > 0) {
+        listDiv.innerHTML = data.response.map(match => {
+            const home = match.teams.home.name;
+            const away = match.teams.away.name;
+            const hora = new Date(match.fixture.date).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+            const matchData = encodeURIComponent(JSON.stringify(match));
+
+            return `
+                <div class="match-item" onclick="analizarPartido('${matchData}')">
+                    <div style="width:40%; font-size:14px; font-weight:600;">${home}</div>
+                    <div style="width:20%; text-align:center; color:#ccff00; font-weight:800;">${hora}</div>
+                    <div style="width:40%; text-align:right; font-size:14px; font-weight:600;">${away}</div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        listDiv.innerHTML = '<p style="text-align:center;">No hay partidos en esta fecha.</p>';
+    }
+}
+
+// 2. ANÁLISIS DEL PARTIDO (API-FOOTBALL + INTELIGENCIA ARTIFICIAL)
+async function analizarPartido(matchDataString) {
+    const match = JSON.parse(decodeURIComponent(matchDataString));
+    
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById('detail-screen').style.display = 'block';
-    document.getElementById('detail-content').innerHTML = '<div class="loader">La IA está analizando el partido... 🧠⏳</div>';
+    
+    // Rellenamos la cabecera visual
+    document.getElementById('ui-title').innerHTML = `${match.teams.home.name} vs <span>${match.teams.away.name}</span>`;
+    const fechaObj = new Date(match.fixture.date);
+    document.getElementById('ui-date').innerText = fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('ui-time').innerText = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' hs';
+    document.getElementById('ui-stadium').innerText = match.fixture.venue.name || "Estadio no disponible";
+
+    const contentDiv = document.getElementById('detail-content');
+    contentDiv.innerHTML = '<div class="loader">🧠 La IA está analizando el partido... ⏳</div>';
 
     try {
-        // Hacemos la petición al endpoint de Predicciones
-        const response = await fetch(`${API_HOST}/predictions?fixture=${matchId}`, {
+        // 1. Pedimos los datos matemáticos a API-Football
+        const response = await fetch(`${API_HOST}/predictions?fixture=${match.fixture.id}`, {
             method: 'GET', headers: { 'x-apisports-key': API_KEY }
         });
         const data = await response.json();
 
         if (data.response && data.response.length > 0) {
-            const pred = data.response[0];
-            const fixture = pred.fixture;
-            const teams = pred.teams;
-            const predictions = pred.predictions;
-            const comparison = pred.comparison;
-
-            // Títulos
-            document.getElementById('detail-match-title').innerText = `${teams.home.name} vs ${teams.away.name}`;
-            document.getElementById('detail-league-title').innerText = `${pred.league.name}`;
-
-            // Parsear porcentajes reales
-            const percent = predictions.percent;
-            const probHome = percent.home.replace('%', '');
-            const probAway = percent.away.replace('%', '');
+            const pred = data.response[0].predictions;
+            const percent = pred.percent;
+            const probHome = parseInt(percent.home.replace('%', '')) || 0;
+            const probAway = parseInt(percent.away.replace('%', '')) || 0;
+            const probDraw = parseInt(percent.draw.replace('%', '')) || 0;
+            const btts = pred.btts ? "SÍ" : "NO";
             
-            // Datos de goles
-            const goalsUnderOver = predictions.under_over; // Ej: "-2.5": { "over": "Yes", ... } o null
-            const advice = predictions.advice || "No hay consejo directo para este partido.";
-            const winner = predictions.winner.name || "Empate / Incierto";
-            const btts = predictions.btts ? "Sí" : "No";
+            // 2. Llamamos a GROQ para que redacte el análisis
+            const consejoIA = await generarAnalisisGroq(match.teams.home.name, match.teams.away.name, probHome, probDraw, probAway, btts, pred.advice);
 
-            // Como la API gratuita no da córners y tarjetas, generamos una estimación basada en la media
-            // (En el futuro se podría conectar a otra API de pago para esto)
-            const cornersEst = (Math.random() * (11 - 7) + 7).toFixed(1); // Entre 7 y 11
-            const cardsEst = (Math.random() * (6 - 2) + 2).toFixed(1); // Entre 2 y 6
-
-            const detailHtml = `
-                <div class="pick-box">
-                    <h2>🏆 Ganador: ${winner}</h2>
-                    <p><strong>Consejo IA:</strong> ${advice}</p>
-                </div>
-
-                <div class="section-title"><span>📊</span> Probabilidades del partido</div>
-                <div class="card">
-                    <div class="teams-row">
-                        <div class="team">
-                            <img src="${teams.home.logo}" alt="Local">
-                            <h3>${teams.home.name}</h3>
-                            <span style="color:#4CAF50; font-weight:bold;">${probHome}%</span>
-                        </div>
-                        <div style="font-weight:bold; color:#aaa;">VS</div>
-                        <div class="team">
-                            <img src="${teams.away.logo}" alt="Visita">
-                            <h3>${teams.away.name}</h3>
-                            <span style="color:#F44336; font-weight:bold;">${probAway}%</span>
-                        </div>
+            // 3. Pintamos todo el diseño
+            let html = `
+                <div class="stats-card">
+                    <div class="stat-row">
+                        <div class="stat-name">Prob. Local</div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probHome}%;"></div></div>
+                        <div class="stat-value">${probHome}%</div>
                     </div>
-                    
-                    <div class="bar-container">
-                        <div class="bar-left">${probHome}%</div>
-                        <div class="bar-middle">
-                            <div class="bar-fill-green" style="width: ${probHome}%;"></div>
-                            <div class="bar-fill-red" style="width: ${probAway}%;"></div>
-                        </div>
-                        <div class="bar-right">${probAway}%</div>
+                    <div class="stat-row">
+                        <div class="stat-name">Prob. Empate</div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probDraw}%; background: #a8b2d1;"></div></div>
+                        <div class="stat-value">${probDraw}%</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-name">Prob. Visita</div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probAway}%;"></div></div>
+                        <div class="stat-value">${probAway}%</div>
                     </div>
                 </div>
 
-                <div class="section-title"><span>⚽</span> Predicciones de Goles</div>
-                <div class="card" style="padding:0;">
-                    <table class="stats-table">
-                        <tr>
-                            <th>Mercado</th>
-                            <th>Resultado IA</th>
-                        </tr>
-                        <tr>
-                            <td>Ambos Equipos Marcan (BTTS)</td>
-                            <td class="${btts === 'Sí' ? 'bg-green' : 'bg-red'}">${btts}</td>
-                        </tr>
-                        <tr>
-                            <td>Más de 1.5 Goles</td>
-                            <td class="${goalsUnderOver && goalsUnderOver['1.5'] && goalsUnderOver['1.5'].over === 'Yes' ? 'bg-green' : 'bg-red'}">
-                                ${goalsUnderOver && goalsUnderOver['1.5'] ? (goalsUnderOver['1.5'].over === 'Yes' ? 'Sí' : 'No') : 'N/A'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Más de 2.5 Goles</td>
-                            <td class="${goalsUnderOver && goalsUnderOver['2.5'] && goalsUnderOver['2.5'].over === 'Yes' ? 'bg-green' : 'bg-red'}">
-                                ${goalsUnderOver && goalsUnderOver['2.5'] ? (goalsUnderOver['2.5'].over === 'Yes' ? 'Sí' : 'No') : 'N/A'}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Más de 3.5 Goles</td>
-                            <td class="${goalsUnderOver && goalsUnderOver['3.5'] && goalsUnderOver['3.5'].over === 'Yes' ? 'bg-green' : 'bg-red'}">
-                                ${goalsUnderOver && goalsUnderOver['3.5'] ? (goalsUnderOver['3.5'].over === 'Yes' ? 'Sí' : 'No') : 'N/A'}
-                            </td>
-                        </tr>
-                    </table>
+                <div class="ai-pick">
+                    <h3>⭐ Análisis de la IA</h3>
+                    <p style="line-height: 1.5;">${consejoIA}</p>
                 </div>
 
-                <div class="section-title"><span>🚩</span> Estadísticas estimadas</div>
-                <div class="card" style="padding:0;">
-                    <table class="stats-table">
-                        <tr>
-                            <th>Mercado</th>
-                            <th>Media esperada</th>
-                        </tr>
-                        <tr>
-                            <td>Córners totales (Estimado)</td>
-                            <td class="bg-yellow">${cornersEst}</td>
-                        </tr>
-                        <tr>
-                            <td>Tarjetas totales (Estimado)</td>
-                            <td class="bg-yellow">${cardsEst}</td>
-                        </tr>
-                    </table>
-                    <p style="font-size:10px; color:#aaa; padding:10px;">* Datos de córners y tarjetas estimados por el sistema, ya que la API gratuita no provee datos históricos exactos de estos mercados para este partido.</p>
+                <div class="grid-stats">
+                    <div class="grid-card" style="border-bottom-color: ${btts === 'SÍ' ? '#ccff00' : '#f44336'};">
+                        <h4>Ambos Marcan (BTTS)</h4>
+                        <div class="value" style="color: ${btts === 'SÍ' ? '#ccff00' : '#f44336'};">${btts}</div>
+                    </div>
+                    <div class="grid-card">
+                        <h4>Ganador Probable</h4>
+                        <div class="value" style="font-size:14px;">${pred.winner.name || 'Incierto'}</div>
+                    </div>
                 </div>
+
+                <button class="floating-btn" onclick="volverAtras()">✓ Análisis Listo</button>
             `;
 
-            document.getElementById('detail-content').innerHTML = detailHtml;
+            contentDiv.innerHTML = html;
+
         } else {
-            document.getElementById('detail-content').innerHTML = '<p style="text-align:center;">No se pudo analizar este partido (puede que la IA no tenga datos suficientes).</p>';
+            contentDiv.innerHTML = '<p style="text-align:center; padding:20px;">La API no tiene datos de predicción para este partido.</p><button class="floating-btn" onclick="volverAtras()">Volver</button>';
         }
     } catch (error) {
-        document.getElementById('detail-content').innerHTML = `<p style="color: red; text-align:center;">Error al analizar el partido.</p>`;
+        contentDiv.innerHTML = `<p style="color: red; text-align:center;">Error al conectar. Revisa tu clave de API-Football.</p><button class="floating-btn" onclick="volverAtras()">Volver</button>`;
+    }
+}
+
+// 4. FUNCIÓN QUE CONECTA CON GROQ
+async function generarAnalisisGroq(local, visita, pLocal, pEmpate, pVisita, btts, advice) {
+    const prompt = `Eres un analista de fútbol profesional. Analiza este partido: ${local} vs ${visita}.
+    Datos: Probabilidad Local ${pLocal}%, Empate ${pEmpate}%, Visita ${pVisita}%. Ambos marcan: ${btts}.
+    Consejo técnico: ${advice || 'Ninguno'}.
+    Escribe un análisis breve (máximo 3 frases) en español. Sé directo, di quién tiene más probabilidades de ganar o si es un partido cerrado. No uses saludos.`;
+
+    try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile', 
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.6
+            })
+        });
+        const data = await response.json();
+        
+        if(data.choices && data.choices.length > 0) {
+            return data.choices[0].message.content;
+        } else {
+            return "El análisis de IA no está disponible. " + (advice || "");
+        }
+    } catch (e) {
+        return "Partido igualado según las estadísticas. Consejo: " + (advice || "Prudencia.");
     }
 }
