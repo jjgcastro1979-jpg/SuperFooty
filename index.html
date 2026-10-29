@@ -3,257 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperFooty Premium AI - LIVE</title>
+    <title>Futbol Analyzer</title>
     <style>
-        :root {
-            --azul-fondo: #0a192f;
-            --azul-tarjeta: #172a45;
-            --amarillo-ia: #f6c23e;
-            --blanco: #ffffff;
-            --gris: #8892b0;
-            --ia-verde: #10b981;
-            --rojo-aviso: #ef4444;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--azul-fondo);
-            color: var(--blanco);
-            margin: 0;
-            padding: 0;
-            padding-bottom: 30px;
-        }
-        header {
-            background-color: var(--azul-tarjeta);
-            border-bottom: 2px solid var(--amarillo-ia);
-            padding: 15px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 20px;
-            color: var(--amarillo-ia);
-        }
-        .container { padding: 15px; }
-        .live-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin: 10px 0 15px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .loading-text {
-            text-align: center;
-            color: var(--gris);
-            margin-top: 40px;
-            font-size: 14px;
-        }
-        .liga-badge {
-            background: rgba(246, 194, 62, 0.1);
-            color: var(--amarillo-ia);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            margin-top: 20px;
-            margin-bottom: 8px;
-            border-left: 3px solid var(--amarillo-ia);
-        }
-        .partido-fila-real {
-            background: var(--azul-tarjeta);
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255,255,255,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-        }
-        .partido-fila-real:hover { border-color: var(--amarillo-ia); }
-        .equipos-container {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .equipo-txt { font-size: 14px; font-weight: bold; }
-        .hora-txt {
-            font-size: 12px;
-            color: var(--amarillo-ia);
-            background: rgba(246, 194, 62, 0.08);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        .panel-analisis {
-            display: none;
-            background-color: var(--azul-tarjeta);
-            border-radius: 16px;
-            padding: 20px;
-            border: 2px solid var(--amarillo-ia);
-            margin-top: 10px;
-        }
-        .btn-volver {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        .section-title {
-            font-size: 13px;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: var(--amarillo-ia);
-            margin: 18px 0 8px 0;
-            letter-spacing: 0.5px;
-        }
-        .stat-row { margin-bottom: 10px; }
-        .stat-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-        .stat-bar-container {
-            background: rgba(255, 255, 255, 0.1);
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .stat-bar-fill { background-color: var(--amarillo-ia); height: 100%; border-radius: 4px; }
-        .stat-bar-fill.verde { background-color: var(--ia-verde); }
-        .odds-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .odd-box {
-            background: rgba(255, 255, 255, 0.04);
-            padding: 10px;
-            text-align: center;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .odd-name { font-size: 11px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .odd-val { font-size: 13px; font-weight: bold; color: var(--amarillo-ia); margin-top: 2px; }
-        .ai-box {
-            background: rgba(16, 185, 129, 0.08);
-            border: 1px dashed var(--ia-verde);
-            border-radius: 12px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-        .ai-badge {
-            background: var(--ia-verde);
-            color: var(--azul-fondo);
-            font-size: 10px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 4px;
-            display: inline-block;
-            margin-bottom: 6px;
-        }
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
+        header { text-align: center; margin-bottom: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #0056b3; }
+        #results { margin-top: 20px; }
+        .match-card { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; background: #fafafa; }
     </style>
 </head>
 <body>
-
-    <header>⚡ SuperFooty Premium AI</header>
-
+    <header>
+        <h1>⚽ Futbol Analyzer</h1>
+        <p>Análisis estadístico de partidos</p>
+    </header>
     <div class="container">
-        <div id="vista-lista">
-            <div class="live-title">
-                <span>📅 Partidos de Hoy Real-Time</span>
-                <span id="contador-partidos" style="font-size:12px; color:var(--ia-verde);">Conectando...</span>
-            </div>
-            <div id="lista-partidos-real">
-                <div class="loading-text">Iniciando conexión con los servidores deportivos...</div>
-            </div>
+        <div class="form-group">
+            <label for="league-select">Selecciona una liga:</label>
+            <select id="league-select">
+                <option value="39">Premier League (Inglaterra)</option>
+                <option value="140">La Liga (España)</option>
+                <option value="135">Serie A (Italia)</option>
+                <option value="78">Bundesliga (Alemania)</option>
+                <option value="61">Ligue 1 (Francia)</option>
+            </select>
         </div>
-
-        <div id="vista-analisis" class="panel-analisis">
-            <button class="btn-volver" onclick="mostrarLista()">⬅ Volver a la lista</button>
-            <div id="analisis-dinamico-contenido"></div>
-        </div>
+        <button id="fetch-btn">Consultar Próximos Partidos</button>
+        <div id="results"></div>
     </div>
-
-    <script>
-        // Endpoint alternativo de respaldo global sin bloqueos CORS
-        const fallbackUrl = 'https://allorigins.win';
-
-        let partidosMundiales = [];
-
-        async function conectarYDescargarFutbol() {
-            const listaDiv = document.getElementById('lista-partidos-real');
-            try {
-                const respuesta = await fetch(fallbackUrl);
-                const resultado = await respuesta.json();
-                const listado = resultado.events;
-
-                if (!listado || listado.length === 0) {
-                    listaDiv.innerHTML = '<div class="loading-text">No hay partidos registrados para hoy.</div>';
-                    document.getElementById('contador-partidos').innerText = "Online";
-                    return;
-                }
-
-                partidosMundiales = listado.slice(0, 35);
-                listaDiv.innerHTML = '';
-                let ligaAgrupadora = '';
-
-                partidosMundiales.forEach((item, index) => {
-                    if (item.strLeague !== ligaAgrupadora) {
-                        ligaAgrupadora = item.strLeague;
-                        const badge = document.createElement('div');
-                        badge.className = 'liga-badge';
-                        badge.innerText = `🏆 ${ligaAgrupadora}`;
-                        listaDiv.appendChild(badge);
-                    }
-
-                    const fila = document.createElement('div');
-                    fila.className = 'partido-fila-real';
-                    fila.setAttribute('onclick', `ejecutarAnalisisGPT5(${index})`);
-                    fila.innerHTML = `
-                        <div class="equipos-container">
-                            <div class="equipo-txt">⚽ ${item.strEvent}</div>
-                        </div>
-                        <div class="hora-txt">Analizar</div>
-                    `;
-                    listaDiv.appendChild(fila);
-                });
-
-                document.getElementById('contador-partidos').innerText = `Partidos: ${partidosMundiales.length}`;
-
-            } catch (err) {
-                console.error(err);
-                listaDiv.innerHTML = '<div class="loading-text" style="color:var(--rojo-aviso)">Error al saltar restricciones del terminal móvil. Reintenta de nuevo.</div>';
-                document.getElementById('contador-partidos').innerText = "Error";
-            }
-        }
-
-        function ejecutarAnalisisGPT5(idx) {
-            const p = partidosMundiales[idx];
-            const semilla = p.strEvent.length;
-            
-            const probL = 33 + (semilla % 32);
-            const probV = 88 - probL;
-            const probE = 100 - probL - probV;
-
-            const golesEsp = (1.6 + (semilla % 4) / 1.4).toFixed(2);
-            const cornersEsp = (7.8 + (semilla % 6)).toFixed(1);
-            const ambosMarcanPct = 38 + (semilla % 42);
-
-            const cL = (100 / probL * 0.95).toFixed(2);
-            const cE = (100 / probE * 0.95).toFixed(2);
-            const cV = (100 / probV * 0.95).toFixed(2);
-
-            let pickFinal = `Más de 1.5 Goles Totales`;
-            let justificacion = `Ambos entrenadores proponen planteamientos dinámicos en campo rival. Gran probabilidad de superar la línea de anotación propuesta.`;
-
-            if(probL > 48) {
-                pickFinal = `Victoria / Empate Local`;
-                justificacion = `El modelo GPT-5 proyecta una ventaja táctica en transiciones basadas en el rendimiento histórico del cuadro local.`;
-            } else if (probV > 45) {
-                pickFinal = `X2 o Apuesta Sin Empate Visitante`;
-                justificacion = `Rendimiento de ataque superior en bloques altos por parte del conjunto visitante. Fiabilidad del algoritmo del 83%.`;
-            }
-
-            const html = `
-                <div style="font-size: 15px; font-weight: bold; text-align: center; margin-bottom: 4px;">🔥 ${p.strEvent}</div>
+    <!-- Aquí conectamos nuestro archivo de lógica -->
+    <script src="app.js"></script>
+</body>
+</html>
