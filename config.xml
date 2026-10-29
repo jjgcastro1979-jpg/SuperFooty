@@ -9,4 +9,5 @@
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     <preference name="Orientation" value="portrait" />
+<icon src="https://cdn-icons-png.flaticon.com/512/3113/3113031.png" />
 </widget>
