@@ -1,6 +1,6 @@
 
-const FOOTBALL_DATA_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; // Tu token nuevo
-const GROQ_API_KEY = 'gsk_AChscu28ltE08lD5FPEzWGdyb3FYKvd3SCZG2UQQ16YxYugu7m'; // ⚠️ Pega aquí tu clave de Groq
+const FOOTBALL_DATA_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; // 
+const GROQ_API_KEY = 'gsk_AChscu28ltE08lD5FPEzWGdyb3FYKvd3SCZG2UQQ16YxYugu7m'; // 
 
 // Poner la fecha de HOY automáticamente
 document.addEventListener('DOMContentLoaded', () => {
