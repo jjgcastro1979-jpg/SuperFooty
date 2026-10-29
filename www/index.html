@@ -3,191 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sport Insights</title>
+    <title>Sport Insights Pro</title>
     <style>
-        /* Importamos una fuente moderna de Google */
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap');
-
-        body { 
-            font-family: 'Montserrat', sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background-color: #081124; /* Azul muy oscuro de fondo */
-            color: #ffffff; 
-        }
-
-        /* Barra superior imitando la de las fotos */
-        .header-bar {
-            background-color: #ccff00; /* Verde neón */
-            color: #000;
-            padding: 10px 20px;
-            border-radius: 20px 20px 0 0;
-            font-weight: 800;
-            font-size: 14px;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: -10px;
-        }
-
-        .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background: #0f1c3f; /* Azul de las tarjetas */
-            padding: 20px; 
-            border-radius: 0 0 20px 20px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-        }
-
-        .match-title {
-            font-size: 22px;
-            font-weight: 800;
-            margin-bottom: 15px;
-            line-height: 1.2;
-        }
-
-        .match-title span { color: #ccff00; } /* Texto verde */
-
-        .info-line {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: #a8b2d1;
-            margin-bottom: 10px;
-        }
-
-        .info-line svg { margin-right: 8px; fill: #a8b2d1; }
-
-        /* Tarjeta de estadísticas */
-        .stats-card {
-            background: #14264f;
-            border-radius: 15px;
-            padding: 15px;
-            margin: 20px 0;
-            border-left: 4px solid #ccff00;
-        }
-
-        .stat-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
-
-        .stat-name { width: 30%; }
-        .stat-bar-bg { 
-            width: 60%; 
-            height: 8px; 
-            background: #2a3d6b; 
-            border-radius: 4px; 
-            margin: 0 10px;
-        }
-        .stat-bar-fill { 
-            height: 100%; 
-            background: #ccff00; 
-            border-radius: 4px; 
-        }
-        .stat-value { width: 10%; text-align: right; }
-
-        /* Botón de IA */
-        .ai-pick {
-            background: #14264f;
-            border: 1px solid #ccff00;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .ai-pick h3 { margin: 0 0 10px 0; color: #ccff00; font-size: 16px; }
-
-        /* Selector y botón de búsqueda */
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-size: 14px; color: #a8b2d1; }
-        select { 
-            width: 100%; 
-            padding: 12px; 
-            background: #14264f; 
-            color: white;
-            border: 1px solid #2a3d6b; 
-            border-radius: 10px; 
-            font-size: 16px;
-            font-family: 'Montserrat', sans-serif;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
         
-        button { 
-            width: 100%; 
-            padding: 15px; 
-            background: #ccff00; 
-            color: #000; 
-            border: none; 
-            border-radius: 10px; 
-            font-size: 16px; 
-            font-weight: 800;
-            cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(204, 255, 0, 0.3);
-        }
-        button:hover { background: #b3e600; }
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        .header { background-color: #222; color: white; padding: 15px; text-align: center; position: relative; }
+        .header h1 { margin: 0; font-size: 18px; font-weight: 500; }
+        .header p { margin: 5px 0 0 0; font-size: 14px; color: #aaa; }
+        .back-btn { position: absolute; left: 15px; top: 20px; color: white; text-decoration: none; font-size: 20px; cursor: pointer; }
+        
+        .tabs { display: flex; background: #fff; border-bottom: 1px solid #ddd; overflow-x: auto; }
+        .tab { flex: 1; text-align: center; padding: 15px 10px; font-weight: 500; color: #666; cursor: pointer; font-size: 14px; white-space: nowrap; }
+        .tab.active { color: #333; border-bottom: 3px solid #333; font-weight: 700; }
 
-        #results { margin-top: 20px; }
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 30px; }
+        .section-title { background: #e9ecef; padding: 10px 15px; font-weight: 700; font-size: 14px; margin-top: 10px; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; color: #555; display: flex; align-items: center;}
+        .section-title span { margin-right: 8px; }
+        .card { background: #fff; padding: 15px; margin-bottom: 10px; border-bottom: 1px solid #eee; }
+        
+        .teams-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .team { text-align: center; width: 30%; }
+        .team img { width: 50px; height: 50px; object-fit: contain; }
+        .team h3 { font-size: 12px; margin: 5px 0; }
+        
+        .bar-container { display: flex; align-items: center; margin-bottom: 15px; font-size: 13px; }
+        .bar-left { width: 40%; text-align: right; padding-right: 10px; font-weight: bold; }
+        .bar-right { width: 40%; padding-left: 10px; font-weight: bold; }
+        .bar-middle { width: 20%; height: 8px; background: #eee; display: flex; border-radius: 4px; overflow: hidden; }
+        .bar-fill-green { background: #4CAF50; height: 100%; }
+        .bar-fill-red { background: #F44336; height: 100%; }
+
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .stats-table th, .stats-table td { padding: 10px; text-align: center; border: 1px solid #eee; }
+        .stats-table th { background: #f8f9fa; font-weight: 500; color: #666; }
+        .stats-table td:first-child { text-align: left; font-weight: 500; }
+        
+        .bg-green { background-color: #d4edda; color: #155724; }
+        .bg-yellow { background-color: #fff3cd; color: #856404; }
+        .bg-red { background-color: #f8d7da; color: #721c24; }
+
+        .pick-box { background: #222; color: white; padding: 15px; border-radius: 8px; margin: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .pick-box h2 { margin: 0 0 10px 0; color: #4CAF50; font-size: 18px; }
+        .pick-box p { margin: 0; font-size: 14px; line-height: 1.4; }
+
+        #main-screen { display: block; padding: 15px; }
+        #detail-screen { display: none; }
+        button.search-btn { width: 100%; padding: 15px; background: #222; color: white; border: none; border-radius: 8px; font-size: 16px; margin-top: 15px; cursor: pointer; }
+        .loader { text-align: center; font-weight: bold; padding: 20px; color: #666; }
     </style>
 </head>
 <body>
 
-    <!-- Barra superior verde -->
-    <div class="header-bar" style="max-width: 600px; margin: 0 auto;">
-        <span>⭐ Sport Insights</span>
-        <span>✕</span>
+    <div id="main-screen">
+        <div class="header"><h1>UEFA Insights</h1></div>
+        <div class="container">
+            <select id="league-select" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+                <option value="2">UEFA Champions League</option>
+                <option value="3">UEFA Europa League</option>
+                <option value="848">UEFA Conference League</option>
+            </select>
+            <input type="date" id="date-select" style="width: 100%; padding: 10px; box-sizing: border-box;">
+            <button id="fetch-btn" class="search-btn">Buscar Partidos Europeos</button>
+            <div id="results-list" style="margin-top: 20px;"></div>
+        </div>
     </div>
 
-    <div class="container">
-        <h1 class="match-title">Análisis de Partidos <br><span>Inteligencia Artificial</span></h1>
-        
-        <div class="form-group" style="margin-top: 20px;">
-            <label for="league-select">Selecciona una liga:</label>
-            <select id="league-select">
-                <option value="39">Premier League (Inglaterra)</option>
-                <option value="140">La Liga (España)</option>
-                <option value="135">Serie A (Italia)</option>
-                <option value="78">Bundesliga (Alemania)</option>
-                <option value="61">Ligue 1 (Francia)</option>
-            </select>
+    <div id="detail-screen">
+        <div class="header">
+            <span class="back-btn" onclick="volverAtras()">←</span>
+            <h1 id="detail-match-title">Cargando...</h1>
+            <p id="detail-league-title">Competición</p>
         </div>
         
-        <button id="fetch-btn">Analizar Partidos</button>
+        <div class="tabs">
+            <div class="tab active">Análisis IA</div>
+            <div class="tab">Goles</div>
+            <div class="tab">Córners</div>
+            <div class="tab">Tarjetas</div>
+        </div>
 
-        <!-- Aquí se inyectarán los resultados -->
-        <div id="results">
-            <!-- Ejemplo visual de cómo se verá un partido (Datos Mock) -->
-            <div class="stats-card" style="margin-top:20px; border-left: none; border-top: 4px solid #ccff00;">
-                <div class="match-title">Shabab Al Ahli vs <span>Esteghlal</span></div>
-                
-                <div class="info-line">
-                    <svg width="16" height="16" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>
-                    Fecha de Ejemplo
-                </div>
-
-                <div class="stats-card" style="background: #0b1736; border-left: none;">
-                    <div class="stat-row">
-                        <div class="stat-name">Posesión</div>
-                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 65%;"></div></div>
-                        <div class="stat-value">65%</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-name">Tiros</div>
-                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 40%;"></div></div>
-                        <div class="stat-value">40%</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-name">Córners</div>
-                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 52%;"></div></div>
-                        <div class="stat-value">52%</div>
-                    </div>
-                </div>
-
-                <div class="ai-pick">
-                    <h3>🤖 Pick IA:</h3>
-                    <p style="margin:0; font-size: 14px;">Victoria Shabab Al Ahli (Probabilidad 62%)</p>
-                </div>
-            </div>
+        <div class="container" id="detail-content">
+            <!-- El análisis se cargará aquí -->
         </div>
     </div>
 
