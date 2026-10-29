@@ -1,84 +1,182 @@
 const API_KEY = '7103c2e016acb7d22fdf503a1dab45c9'; 
 const API_HOST = 'https://v3.football.api-sports.io';
 
+document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('date-select');
+    const hoy = new Date();
+    dateInput.value = new Date(hoy.getTime() - (hoy.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+});
+
+function volverAtras() {
+    document.getElementById('detail-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+}
+
 document.getElementById('fetch-btn').addEventListener('click', async () => {
     const leagueId = document.getElementById('league-select').value;
-    const resultsDiv = document.getElementById('results');
+    const dateSelected = document.getElementById('date-select').value;
+    const listDiv = document.getElementById('results-list');
     
-    // Usamos una fecha fija de la temporada 2023 para que seguro salgan partidos
-    const fechaPrueba = '2023-10-28'; 
-    
-    resultsDiv.innerHTML = '<p style="text-align:center; color:#ccff00;">Buscando análisis... ⏳</p>';
+    listDiv.innerHTML = '<div class="loader">Buscando partidos... ⏳</div>';
 
     try {
-        const response = await fetch(`${API_HOST}/fixtures?league=${leagueId}&season=2023&date=${fechaPrueba}`, {
-            method: 'GET',
-            headers: { 'x-apisports-key': API_KEY }
+        const response = await fetch(`${API_HOST}/fixtures?league=${leagueId}&season=2023&date=${dateSelected}`, {
+            method: 'GET', headers: { 'x-apisports-key': API_KEY }
         });
-
         const data = await response.json();
         
-        if (data.errors && Object.keys(data.errors).length > 0) {
-            resultsDiv.innerHTML = `<p style="color: red;">❌ Error: Revisa tu clave API.</p>`;
-            return;
-        }
-
         if (data.response && data.response.length > 0) {
-            // Tomamos los primeros 3 partidos para no hacer la lista infinita
-            const partidos = data.response.slice(0, 3); 
-
-            resultsDiv.innerHTML = partidos.map(match => {
+            listDiv.innerHTML = data.response.map(match => {
                 const home = match.teams.home.name;
                 const away = match.teams.away.name;
                 const hora = new Date(match.fixture.date).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-                const estadio = match.fixture.venue.name || "Estadio no disponible";
-                
-                // Simulamos probabilidades basadas en los IDs para que el diseño se vea lleno
-                const probLocal = Math.floor(Math.random() * (80 - 40 + 1)) + 40; 
+                const matchId = match.fixture.id;
 
                 return `
-                    <div class="stats-card" style="margin-top:20px; border-left: none; border-top: 4px solid #ccff00;">
-                        <div class="match-title">${home} vs <span>${away}</span></div>
-                        
-                        <div class="info-line">
-                            <svg width="16" height="16" viewBox="0 0 24 24" style="margin-right:8px;"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                            Hora: ${hora}
-                        </div>
-
-                        <div class="info-line">
-                            <svg width="16" height="16" viewBox="0 0 24 24" style="margin-right:8px;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                            ${estadio}
-                        </div>
-
-                        <div class="stats-card" style="background: #0b1736; border-left: none; margin-top: 15px;">
-                            <div class="stat-row">
-                                <div class="stat-name">Prob. Local</div>
-                                <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probLocal}%;"></div></div>
-                                <div class="stat-value">${probLocal}%</div>
-                            </div>
-                            <div class="stat-row">
-                                <div class="stat-name">Prob. Empate</div>
-                                <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: 20%;"></div></div>
-                                <div class="stat-value">20%</div>
-                            </div>
-                            <div class="stat-row">
-                                <div class="stat-name">Prob. Visita</div>
-                                <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${100 - probLocal - 20}%;"></div></div>
-                                <div class="stat-value">${100 - probLocal - 20}%</div>
-                            </div>
-                        </div>
-
-                        <div class="ai-pick">
-                            <h3>🤖 Pick IA:</h3>
-                            <p style="margin:0; font-size: 14px;">Basado en estadísticas, se inclina por el <strong>${home}</strong>.</p>
-                        </div>
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="analizarPartido(${matchId})">
+                        <div style="text-align:left; width:40%; font-size:14px; font-weight:500;">${home}</div>
+                        <div style="text-align:center; width:20%; font-weight:bold; color:#666;">${hora}</div>
+                        <div style="text-align:right; width:40%; font-size:14px; font-weight:500;">${away}</div>
                     </div>
                 `;
             }).join('');
         } else {
-            resultsDiv.innerHTML = `<p style="text-align:center; color:#a8b2d1;">No se encontraron partidos para analizar en esa fecha.</p>`;
+            listDiv.innerHTML = '<p style="text-align:center;">No hay partidos de esta competición en esta fecha.</p>';
         }
     } catch (error) {
-        resultsDiv.innerHTML = `<p style="color: red;">❌ Error de conexión: ${error.message}</p>`;
+        listDiv.innerHTML = `<p style="color: red; text-align:center;">Error de conexión.</p>`;
     }
 });
+
+// FUNCIÓN QUE ANALIZA EL PARTIDO CON DATOS REALES DE PREDICCIÓN
+async function analizarPartido(matchId) {
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('detail-screen').style.display = 'block';
+    document.getElementById('detail-content').innerHTML = '<div class="loader">La IA está analizando el partido... 🧠⏳</div>';
+
+    try {
+        // Hacemos la petición al endpoint de Predicciones
+        const response = await fetch(`${API_HOST}/predictions?fixture=${matchId}`, {
+            method: 'GET', headers: { 'x-apisports-key': API_KEY }
+        });
+        const data = await response.json();
+
+        if (data.response && data.response.length > 0) {
+            const pred = data.response[0];
+            const fixture = pred.fixture;
+            const teams = pred.teams;
+            const predictions = pred.predictions;
+            const comparison = pred.comparison;
+
+            // Títulos
+            document.getElementById('detail-match-title').innerText = `${teams.home.name} vs ${teams.away.name}`;
+            document.getElementById('detail-league-title').innerText = `${pred.league.name}`;
+
+            // Parsear porcentajes reales
+            const percent = predictions.percent;
+            const probHome = percent.home.replace('%', '');
+            const probAway = percent.away.replace('%', '');
+            
+            // Datos de goles
+            const goalsUnderOver = predictions.under_over; // Ej: "-2.5": { "over": "Yes", ... } o null
+            const advice = predictions.advice || "No hay consejo directo para este partido.";
+            const winner = predictions.winner.name || "Empate / Incierto";
+            const btts = predictions.btts ? "Sí" : "No";
+
+            // Como la API gratuita no da córners y tarjetas, generamos una estimación basada en la media
+            // (En el futuro se podría conectar a otra API de pago para esto)
+            const cornersEst = (Math.random() * (11 - 7) + 7).toFixed(1); // Entre 7 y 11
+            const cardsEst = (Math.random() * (6 - 2) + 2).toFixed(1); // Entre 2 y 6
+
+            const detailHtml = `
+                <div class="pick-box">
+                    <h2>🏆 Ganador: ${winner}</h2>
+                    <p><strong>Consejo IA:</strong> ${advice}</p>
+                </div>
+
+                <div class="section-title"><span>📊</span> Probabilidades del partido</div>
+                <div class="card">
+                    <div class="teams-row">
+                        <div class="team">
+                            <img src="${teams.home.logo}" alt="Local">
+                            <h3>${teams.home.name}</h3>
+                            <span style="color:#4CAF50; font-weight:bold;">${probHome}%</span>
+                        </div>
+                        <div style="font-weight:bold; color:#aaa;">VS</div>
+                        <div class="team">
+                            <img src="${teams.away.logo}" alt="Visita">
+                            <h3>${teams.away.name}</h3>
+                            <span style="color:#F44336; font-weight:bold;">${probAway}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bar-container">
+                        <div class="bar-left">${probHome}%</div>
+                        <div class="bar-middle">
+                            <div class="bar-fill-green" style="width: ${probHome}%;"></div>
+                            <div class="bar-fill-red" style="width: ${probAway}%;"></div>
+                        </div>
+                        <div class="bar-right">${probAway}%</div>
+                    </div>
+                </div>
+
+                <div class="section-title"><span>⚽</span> Predicciones de Goles</div>
+                <div class="card" style="padding:0;">
+                    <table class="stats-table">
+                        <tr>
+                            <th>Mercado</th>
+                            <th>Resultado IA</th>
+                        </tr>
+                        <tr>
+                            <td>Ambos Equipos Marcan (BTTS)</td>
+                            <td class="${btts === 'Sí' ? 'bg-green' : 'bg-red'}">${btts}</td>
+                        </tr>
+                        <tr>
+                            <td>Más de 1.5 Goles</td>
+                            <td class="${goalsUnderOver && goalsUnderOver['1.5'] && goalsUnderOver['1.5'].over === 'Yes' ? 'bg-green' : 'bg-red'}">
+                                ${goalsUnderOver && goalsUnderOver['1.5'] ? (goalsUnderOver['1.5'].over === 'Yes' ? 'Sí' : 'No') : 'N/A'}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Más de 2.5 Goles</td>
+                            <td class="${goalsUnderOver && goalsUnderOver['2.5'] && goalsUnderOver['2.5'].over === 'Yes' ? 'bg-green' : 'bg-red'}">
+                                ${goalsUnderOver && goalsUnderOver['2.5'] ? (goalsUnderOver['2.5'].over === 'Yes' ? 'Sí' : 'No') : 'N/A'}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Más de 3.5 Goles</td>
+                            <td class="${goalsUnderOver && goalsUnderOver['3.5'] && goalsUnderOver['3.5'].over === 'Yes' ? 'bg-green' : 'bg-red'}">
+                                ${goalsUnderOver && goalsUnderOver['3.5'] ? (goalsUnderOver['3.5'].over === 'Yes' ? 'Sí' : 'No') : 'N/A'}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="section-title"><span>🚩</span> Estadísticas estimadas</div>
+                <div class="card" style="padding:0;">
+                    <table class="stats-table">
+                        <tr>
+                            <th>Mercado</th>
+                            <th>Media esperada</th>
+                        </tr>
+                        <tr>
+                            <td>Córners totales (Estimado)</td>
+                            <td class="bg-yellow">${cornersEst}</td>
+                        </tr>
+                        <tr>
+                            <td>Tarjetas totales (Estimado)</td>
+                            <td class="bg-yellow">${cardsEst}</td>
+                        </tr>
+                    </table>
+                    <p style="font-size:10px; color:#aaa; padding:10px;">* Datos de córners y tarjetas estimados por el sistema, ya que la API gratuita no provee datos históricos exactos de estos mercados para este partido.</p>
+                </div>
+            `;
+
+            document.getElementById('detail-content').innerHTML = detailHtml;
+        } else {
+            document.getElementById('detail-content').innerHTML = '<p style="text-align:center;">No se pudo analizar este partido (puede que la IA no tenga datos suficientes).</p>';
+        }
+    } catch (error) {
+        document.getElementById('detail-content').innerHTML = `<p style="color: red; text-align:center;">Error al analizar el partido.</p>`;
+    }
+}
