@@ -1,0 +1,191 @@
+
+const API_KEY = '7103c2e016acb7d22fdf503a1dab45c9'; 
+const GROQ_API_KEY = 'gsk_AChscu28ltE08lD5FPEzWGdyb3FYKvd3SCZG2UQQ16YxYugu7m'; 
+
+const API_HOST = 'https://v3.football.api-sports.io';
+
+// Poner fecha de hoy automáticamente
+document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('date-select');
+    const hoy = new Date();
+    dateInput.value = new Date(hoy.getTime() - (hoy.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+});
+
+function volverAtras() {
+    document.getElementById('detail-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+}
+
+// 1. BUSCAR PARTIDOS (CON CACHÉ PARA AHORRAR PETICIONES)
+document.getElementById('fetch-btn').addEventListener('click', async () => {
+    const leagueId = document.getElementById('league-select').value;
+    const dateSelected = document.getElementById('date-select').value;
+    const listDiv = document.getElementById('results-list');
+    
+    listDiv.innerHTML = '<div class="loader">Buscando partidos... ⏳</div>';
+
+    const cacheKey = `partidos_${leagueId}_${dateSelected}`;
+    const cachedData = localStorage.getItem(cacheKey);
+
+    // SI YA ESTÁ EN MEMORIA, LO USAMOS (AHORRAMOS 1 PETICIÓN)
+    if (cachedData) {
+        console.log("Usando caché local...");
+        renderizarLista(JSON.parse(cachedData));
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_HOST}/fixtures?league=${leagueId}&season=2023&date=${dateSelected}`, {
+            method: 'GET', headers: { 'x-apisports-key': API_KEY }
+        });
+        const data = await response.json();
+        
+        // Guardamos en caché si hay datos válidos
+        if (data.response && data.response.length > 0) {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+        }
+        
+        renderizarLista(data);
+
+    } catch (error) {
+        listDiv.innerHTML = `<p style="color: red; text-align:center;">Error de conexión. Revisa tu clave API.</p>`;
+    }
+});
+
+function renderizarLista(data) {
+    const listDiv = document.getElementById('results-list');
+    if (data.response && data.response.length > 0) {
+        listDiv.innerHTML = data.response.map(match => {
+            const home = match.teams.home.name;
+            const away = match.teams.away.name;
+            const hora = new Date(match.fixture.date).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+            const matchData = encodeURIComponent(JSON.stringify(match));
+
+            return `
+                <div class="match-item" onclick="analizarPartido('${matchData}')">
+                    <div style="width:40%; font-size:14px; font-weight:600;">${home}</div>
+                    <div style="width:20%; text-align:center; color:#ccff00; font-weight:800;">${hora}</div>
+                    <div style="width:40%; text-align:right; font-size:14px; font-weight:600;">${away}</div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        listDiv.innerHTML = '<p style="text-align:center;">No hay partidos en esta fecha.</p>';
+    }
+}
+
+// 2. ANÁLISIS DEL PARTIDO (API-FOOTBALL + INTELIGENCIA ARTIFICIAL)
+async function analizarPartido(matchDataString) {
+    const match = JSON.parse(decodeURIComponent(matchDataString));
+    
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('detail-screen').style.display = 'block';
+    
+    // Rellenamos la cabecera visual
+    document.getElementById('ui-title').innerHTML = `${match.teams.home.name} vs <span>${match.teams.away.name}</span>`;
+    const fechaObj = new Date(match.fixture.date);
+    document.getElementById('ui-date').innerText = fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('ui-time').innerText = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' hs';
+    document.getElementById('ui-stadium').innerText = match.fixture.venue.name || "Estadio no disponible";
+
+    const contentDiv = document.getElementById('detail-content');
+    contentDiv.innerHTML = '<div class="loader">🧠 La IA está analizando el partido... ⏳</div>';
+
+    try {
+        // 1. Pedimos los datos matemáticos a API-Football
+        const response = await fetch(`${API_HOST}/predictions?fixture=${match.fixture.id}`, {
+            method: 'GET', headers: { 'x-apisports-key': API_KEY }
+        });
+        const data = await response.json();
+
+        if (data.response && data.response.length > 0) {
+            const pred = data.response[0].predictions;
+            const percent = pred.percent;
+            const probHome = parseInt(percent.home.replace('%', '')) || 0;
+            const probAway = parseInt(percent.away.replace('%', '')) || 0;
+            const probDraw = parseInt(percent.draw.replace('%', '')) || 0;
+            const btts = pred.btts ? "SÍ" : "NO";
+            
+            // 2. Llamamos a GROQ para que redacte el análisis
+            const consejoIA = await generarAnalisisGroq(match.teams.home.name, match.teams.away.name, probHome, probDraw, probAway, btts, pred.advice);
+
+            // 3. Pintamos todo el diseño
+            let html = `
+                <div class="stats-card">
+                    <div class="stat-row">
+                        <div class="stat-name">Prob. Local</div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probHome}%;"></div></div>
+                        <div class="stat-value">${probHome}%</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-name">Prob. Empate</div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probDraw}%; background: #a8b2d1;"></div></div>
+                        <div class="stat-value">${probDraw}%</div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-name">Prob. Visita</div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${probAway}%;"></div></div>
+                        <div class="stat-value">${probAway}%</div>
+                    </div>
+                </div>
+
+                <div class="ai-pick">
+                    <h3>⭐ Análisis de la IA</h3>
+                    <p style="line-height: 1.5;">${consejoIA}</p>
+                </div>
+
+                <div class="grid-stats">
+                    <div class="grid-card" style="border-bottom-color: ${btts === 'SÍ' ? '#ccff00' : '#f44336'};">
+                        <h4>Ambos Marcan (BTTS)</h4>
+                        <div class="value" style="color: ${btts === 'SÍ' ? '#ccff00' : '#f44336'};">${btts}</div>
+                    </div>
+                    <div class="grid-card">
+                        <h4>Ganador Probable</h4>
+                        <div class="value" style="font-size:14px;">${pred.winner.name || 'Incierto'}</div>
+                    </div>
+                </div>
+
+                <button class="floating-btn" onclick="volverAtras()">✓ Análisis Listo</button>
+            `;
+
+            contentDiv.innerHTML = html;
+
+        } else {
+            contentDiv.innerHTML = '<p style="text-align:center; padding:20px;">La API no tiene datos de predicción para este partido.</p><button class="floating-btn" onclick="volverAtras()">Volver</button>';
+        }
+    } catch (error) {
+        contentDiv.innerHTML = `<p style="color: red; text-align:center;">Error al conectar. Revisa tu clave de API-Football.</p><button class="floating-btn" onclick="volverAtras()">Volver</button>`;
+    }
+}
+
+// 4. FUNCIÓN QUE CONECTA CON GROQ
+async function generarAnalisisGroq(local, visita, pLocal, pEmpate, pVisita, btts, advice) {
+    const prompt = `Eres un analista de fútbol profesional. Analiza este partido: ${local} vs ${visita}.
+    Datos: Probabilidad Local ${pLocal}%, Empate ${pEmpate}%, Visita ${pVisita}%. Ambos marcan: ${btts}.
+    Consejo técnico: ${advice || 'Ninguno'}.
+    Escribe un análisis breve (máximo 3 frases) en español. Sé directo, di quién tiene más probabilidades de ganar o si es un partido cerrado. No uses saludos.`;
+
+    try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile', 
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.6
+            })
+        });
+        const data = await response.json();
+        
+        if(data.choices && data.choices.length > 0) {
+            return data.choices[0].message.content;
+        } else {
+            return "El análisis de IA no está disponible. " + (advice || "");
+        }
+    } catch (e) {
+        return "Partido igualado según las estadísticas. Consejo: " + (advice || "Prudencia.");
+    }
+                                                                                                 }
