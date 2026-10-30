@@ -1,19 +1,10 @@
 // ==========================================
 // CONFIGURACIÓN DE CLAVES
 // ==========================================
-// Tu token de Football-Data.org ya está puesto aquí:
 const FOOTBALL_DATA_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; 
-
-// ⚠️ PON TU CLAVE DE GROQ AQUÍ (empieza por gsk_)
-const GROQ_API_KEY = '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'; 
-
-// ==========================================
-// FECHA DE PRUEBA FORZADA (Para evitar el fallo del 2026)
-// ==========================================
+const GROQ_API_KEY = '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'; // ⚠️ PON TU CLAVE DE GROQ AQUÍ
 document.addEventListener('DOMContentLoaded', () => {
-    const dateInput = document.getElementById('date-select');
-    // Forzamos esta fecha para que salgan partidos reales
-    dateInput.value = '2024-05-20'; 
+    document.getElementById('date-select').value = '2024-05-20'; 
 });
 
 function volverAtras() {
@@ -26,28 +17,34 @@ function volverAtras() {
 }
 
 // ==========================================
-// 1. BUSCAR PARTIDOS
+// 1. BUSCAR PARTIDOS (CON PROXY PARA EVITAR BLOQUEOS)
 // ==========================================
 document.getElementById('fetch-btn').addEventListener('click', async () => {
     const leagueCode = document.getElementById('league-select').value;
     const listDiv = document.getElementById('results-list');
-    
-    // FORZAMOS LA FECHA AQUÍ TAMBIÉN
     const dateSelected = '2024-05-20'; 
     
     listDiv.innerHTML = '<div class="loader">Buscando partidos... ⏳</div>';
 
     try {
-        const response = await fetch(`https://api.football-data.org/v4/competitions/${leagueCode}/matches?dateFrom=${dateSelected}&dateTo=${dateSelected}`, {
+        // Usamos un proxy gratuito para saltar el bloqueo CORS y de red
+        const apiUrl = `https://api.football-data.org/v4/competitions/${leagueCode}/matches?dateFrom=${dateSelected}&dateTo=${dateSelected}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+
+        const response = await fetch(proxyUrl, {
             method: 'GET', 
-            headers: { 'X-Auth-Token': FOOTBALL_DATA_KEY }
+            headers: { 
+                'X-Auth-Token': FOOTBALL_DATA_KEY.trim() // .trim() quita espacios en blanco ocultos
+            }
         });
         
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${data.message || 'Fallo en la petición a la API'}`);
+            if (response.status === 429) throw new Error("Límite de peticiones alcanzado. Espera 1 minuto.");
+            if (response.status === 403) throw new Error("Token incorrecto.");
+            throw new Error(`Error del servidor: ${response.status}`);
         }
+
+        const data = await response.json();
 
         if (data.matches && data.matches.length > 0) {
             listDiv.innerHTML = data.matches.map(match => {
@@ -65,7 +62,7 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
                 `;
             }).join('');
         } else {
-            listDiv.innerHTML = `<p style="text-align:center; color: #ccff00; padding:20px;">La API dice que no hay partidos para esta liga en esta fecha de prueba.</p>`;
+            listDiv.innerHTML = `<p style="text-align:center; color: #ccff00; padding:20px;">La API dice que no hay partidos para esta liga en esta fecha.</p>`;
         }
 
     } catch (error) {
@@ -127,7 +124,7 @@ async function analizarPartido(matchDataString) {
 
             <div class="timeline-container">
                 <h4 style="margin:0 0 5px 0; font-size:14px;">Alineaciones y Eventos</h4>
-                <p>El partido aún no ha comenzado. Los detalles se mostrarán cuando ruede el balón.</p>
+                <p>El partido aún no ha comenzado.</p>
             </div>
         `;
 
