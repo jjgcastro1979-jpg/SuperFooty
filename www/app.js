@@ -1,5 +1,5 @@
 
-const FOOTBALL_DATA_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; // 
+const FOOTBALL_DATA_KEY = '8d7fa340df084e69be06f12c29e41fdc'; // 
 const GROQ_API_KEY = 'gsk_AChscu28ltE08lD5FPEzWGdyb3FYKvd3SCZG2UQQ16YxYugu7m'; // 
 
 // Poner la fecha de HOY automáticamente
