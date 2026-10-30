@@ -1,173 +1,90 @@
 // ==========================================
-// CONFIGURACIÓN DE CLAVES (SOLO GROQ)
+// CLAVE DE GOOGLE GEMINI
 // ==========================================
-const GROQ_API_KEY = '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';
+const GEMINI_API_KEY = 'AQ.Ab8RN6LCG9Bz-WqoaUL0RIAQEcJ56ieeD-CSg0RSuGI-r_KS0g'; // ⚠️ PON TU CLAVE AQUÍ
 
-document.addEventListener('DOMContentLoaded', () => {
-    const dateInput = document.getElementById('date-select');
-    const hoy = new Date();
-    dateInput.value = new Date(hoy.getTime() - (hoy.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-});
+async function consultarGemini(prompt) {
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`;
 
-function volverAtras() {
-    document.getElementById('detail-screen').style.display = 'none';
-    document.getElementById('main-screen').style.display = 'block';
-    const topBack = document.getElementById('top-back');
-    if(topBack) topBack.style.display = 'none';
-    const topTitle = document.getElementById('top-title');
-    if(topTitle) topTitle.innerText = '⭐ Sport Insights';
+    const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7 }
+        })
+    });
+
+    if (!response.ok) throw new Error("Error de conexión.");
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
 }
 
 // ==========================================
-// 1. BUSCAR PARTIDOS GENERADOS POR IA
+// CARGAR PARTIDOS EN SUPERFOOTY
 // ==========================================
-document.getElementById('fetch-btn').addEventListener('click', async () => {
-    const leagueSelect = document.getElementById('league-select');
-    const leagueName = leagueSelect.options[leagueSelect.selectedIndex].text;
-    const dateSelected = document.getElementById('date-select').value;
-    const listDiv = document.getElementById('results-list');
-    
-    listDiv.innerHTML = '<div class="loader">🧠 La IA está buscando los mejores partidos... ⏳</div>';
+async function cargarPartidos() {
+    const listaDiv = document.getElementById('lista-partidos');
+    listaDiv.innerHTML = "<div class='loader'>🧠 Gemini está eligiendo los mejores partidos... ⏳</div>";
 
-    const prompt = `Genera 4 enfrentamientos de fútbol realistas para la competición "${leagueName}" en la fecha ${dateSelected}.
-    Devuelve ÚNICAMENTE un array JSON válido con este formato exacto, sin texto adicional, sin saludos y sin bloques de código markdown:
-    [{"local": "Nombre Equipo Local", "visita": "Nombre Equipo Visita", "hora": "20:00"}, ...]`;
+    const prompt = `Eres el motor de inteligencia artificial de la app "SuperFooty". Genera 4 partidos de fútbol emocionantes. 
+    Devuelve SOLO un array JSON válido, sin texto extra, sin markdown:
+    [{"local": "Equipo A", "visita": "Equipo B", "hora": "20:00", "liga": "La Liga"}]`;
 
     try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'llama3-8b-8192', // 👈 Modelo clásico ultraestable
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.7
-            })
-        });
+        let respuesta = await consultarGemini(prompt);
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Error de Groq (${response.status}): ${errorData.error ? errorData.error.message : 'Revisa tu clave'}`);
-        }
+        // Limpieza de seguridad para extraer el JSON
+        const inicio = respuesta.indexOf('[');
+        const fin = respuesta.lastIndexOf(']');
+        if(inicio !== -1 && fin !== -1) respuesta = respuesta.substring(inicio, fin + 1);
+        
+        const partidos = JSON.parse(respuesta);
 
-        const data = await response.json();
-        let content = data.choices[0].message.content;
-        
-        const startIndex = content.indexOf('[');
-        const endIndex = content.lastIndexOf(']');
-        if (startIndex !== -1 && endIndex !== -1) {
-            content = content.substring(startIndex, endIndex + 1);
-        }
-        
-        const matches = JSON.parse(content);
-
-        listDiv.innerHTML = matches.map(match => {
-            return `
-                <div class="match-item" onclick="analizarPartido('${match.local}', '${match.visita}', '${dateSelected}')">
-                    <div class="team-name">${match.local}</div>
-                    <div class="time">${match.hora}</div>
-                    <div class="team-name" style="text-align:right;">${match.visita}</div>
+        listaDiv.innerHTML = partidos.map((p, i) => `
+            <div class="match-card" onclick="analizarPartido('${p.local}', '${p.visita}', ${i})">
+                <div class="match-header">
+                    <span class="league-badge">${p.liga}</span>
+                    <span class="match-time">⏰ ${p.hora}</span>
                 </div>
-            `;
-        }).join('');
+                <div class="teams-row">
+                    <div class="team-name">${p.local}</div>
+                    <div class="vs-badge">VS</div>
+                    <div class="team-name right">${p.visita}</div>
+                </div>
+                <div id="analisis-${i}" class="ia-box"></div>
+            </div>
+        `).join('');
 
     } catch (error) {
-        listDiv.innerHTML = `<p style="color: #ff6b6b; text-align:center; padding: 20px; background: #14264f; border-radius:10px; font-size: 13px;">⚠️ ${error.message}</p>`;
+        listaDiv.innerHTML = "<p style='color:red; text-align:center;'>Error al cargar. Revisa tu clave de Gemini.</p>";
+        console.error(error);
     }
-});
+}
 
 // ==========================================
-// 2. ANÁLISIS DEL PARTIDO GENERADO POR IA
+// ANÁLISIS DEL PARTIDO (Estilo SuperFooty)
 // ==========================================
-async function analizarPartido(local, visita, fecha) {
-    document.getElementById('main-screen').style.display = 'none';
-    document.getElementById('detail-screen').style.display = 'block';
+async function analizarPartido(local, visita, index) {
+    const caja = document.getElementById(`analisis-${index}`);
     
-    const topBack = document.getElementById('top-back');
-    if(topBack) topBack.style.display = 'block';
-    document.getElementById('top-title').innerText = 'Partido IA';
+    if(caja.style.display === 'block') {
+        caja.style.display = 'none';
+        return;
+    }
 
-    document.getElementById('ui-title').innerHTML = `${local} vs <span>${visita}</span>`;
-    const fechaObj = new Date(fecha + "T20:00:00Z");
-    document.getElementById('ui-date').innerText = fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-    document.getElementById('ui-time').innerText = "20:00 hs";
-    document.getElementById('ui-stadium').innerText = "Estadio IA Simulation";
+    caja.style.display = 'block';
+    caja.innerHTML = "<p>🧠 Analizando tácticas y probabilidades...</p>";
 
-    const contentDiv = document.getElementById('detail-content');
-    contentDiv.innerHTML = '<div class="loader">🧠 La IA está redactando el análisis... ⏳</div>';
-
-    const prompt = `Analiza el partido de fútbol ${local} vs ${visita}.
-    Devuelve ÚNICAMENTE un objeto JSON válido con este formato exacto, sin texto adicional:
-    {
-        "probLocal": 45,
-        "probEmpate": 25,
-        "probVisita": 30,
-        "btts": "SÍ",
-        "ganador": "Nombre del ganador o Empate",
-        "analisis": "Un análisis de 3 frases explicando por qué."
-    }`;
+    const prompt = `Actúa como el analista jefe de "SuperFooty". Analiza el partido ${local} vs ${visita}. 
+    Escribe un análisis breve (máximo 3 frases) en español. 
+    Di quién ganará, si habrá más o menos de 2.5 goles y si ambos equipos marcarán. Sé directo y profesional.`;
 
     try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'llama3-8b-8192', // 👈 Modelo clásico ultraestable
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.6
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error("Error al conectar con la IA.");
-        }
-
-        const data = await response.json();
-        let content = data.choices[0].message.content;
-        
-        const startIndex = content.indexOf('{');
-        const endIndex = content.lastIndexOf('}');
-        if (startIndex !== -1 && endIndex !== -1) {
-            content = content.substring(startIndex, endIndex + 1);
-        }
-
-        const pred = JSON.parse(content);
-
-        let html = `
-            <div class="card">
-                <div class="stat-row">
-                    <div class="stat-name">Prob. Local</div>
-                    <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${pred.probLocal}%;"></div></div>
-                    <div class="stat-value">${pred.probLocal}%</div>
-                </div>
-                <div class="stat-row">
-                    <div class="stat-name">Prob. Empate</div>
-                    <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${pred.probEmpate}%; background: #a8b2d1;"></div></div>
-                    <div class="stat-value">${pred.probEmpate}%</div>
-                </div>
-                <div class="stat-row">
-                    <div class="stat-name">Prob. Visita</div>
-                    <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${pred.probVisita}%;"></div></div>
-                    <div class="stat-value">${pred.probVisita}%</div>
-                </div>
-            </div>
-
-            <div class="ai-pick">
-                <h3>⭐ Pick IA</h3>
-                <p style="margin-bottom:5px;"><strong>Ganador:</strong> ${pred.ganador}</p>
-                <p style="margin-bottom:5px;"><strong>Ambos Marcan (BTTS):</strong> ${pred.btts}</p>
-                <p style="font-size:12px; color:#ccc; margin-top:10px;">${pred.analisis}</p>
-                <div class="dropdown-icon">⌄</div>
-            </div>
-
-            <div class="timeline-container">
-                <h4 style="margin:0 0 5px 0; font-size:14px;">Alineaciones y Eventos</h4>
-                <p>Simulación generada por Inteligencia Artificial para el año 2026.</p>
-            </div>
-        `;
-
-        contentDiv.innerHTML = html;
-
+        const respuesta = await consultarGemini(prompt);
+        caja.innerHTML = `<h4>🤖 Análisis de SuperFooty IA</h4><p>${respuesta}</p>`;
     } catch (error) {
-        contentDiv.innerHTML = `<p style="color: red; text-align:center;">Error al generar el análisis de IA.</p>`;
+        caja.innerHTML = "<p style='color:red;'>Error al analizar. Inténtalo de nuevo.</p>";
     }
-        }
+           }
