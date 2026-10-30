@@ -1,7 +1,7 @@
 // ==========================================
 // CONFIGURACIÓN DE CLAVES (SOLO GROQ)
 // ==========================================
-const GROQ_API_KEY = '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'; // ⚠️ PON TU CLAVE AQUÍ (empieza por gsk_)
+const GROQ_API_KEY = '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';
 
 document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date-select');
@@ -38,7 +38,7 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile', // 👈 Modelo actualizado y activo
+                model: 'llama-3.1-8b-instant', // 👈 Modelo activo
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.7
             })
@@ -111,7 +111,7 @@ async function analizarPartido(local, visita, fecha) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile', // 👈 Modelo actualizado y activo
+                model: 'llama-3.1-8b-instant', // 👈 Modelo activo
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.6
             })
@@ -170,5 +170,4 @@ async function analizarPartido(local, visita, fecha) {
     } catch (error) {
         contentDiv.innerHTML = `<p style="color: red; text-align:center;">Error al generar el análisis de IA.</p>`;
     }
-        }
-                        
+}
