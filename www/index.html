@@ -1,136 +1,371 @@
+index.html
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sport Insights IA</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
-        
-        :root {
-            --bg-main: #081124;
-            --bg-card: #0f1c3f;
-            --bg-darker: #0b1736;
-            --neon: #ccff00;
-            --text-muted: #a8b2d1;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FootyStart | Tu mundo del fútbol</title>
 
-        body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background-color: var(--bg-main); color: #ffffff; padding-bottom: 80px; }
-        
-        /* BARRA SUPERIOR */
-        .top-bar { background-color: var(--neon); color: #000; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15px; border-radius: 0 0 20px 20px; position: sticky; top: 0; z-index: 100; }
-        .top-bar .back-btn { font-size: 18px; cursor: pointer; display: none; }
-        .top-bar .close-btn { font-size: 20px; cursor: pointer; }
-        
-        /* PANTALLA PRINCIPAL */
-        #main-screen { padding: 20px; }
-        select, input[type="date"] { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-card); color: white; border: 1px solid #1d3060; border-radius: 12px; font-family: 'Montserrat'; font-size: 14px; box-sizing: border-box; }
-        .btn-search { width: 100%; padding: 16px; background: var(--neon); color: #000; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(204, 255, 0, 0.2); }
-        
-        /* LISTA DE PARTIDOS */
-        .match-item { background: var(--bg-card); padding: 18px 15px; margin-bottom: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 4px solid var(--neon); }
-        .match-item:active { background: #162a5a; }
-        .match-item .team-name { width: 38%; font-size: 14px; font-weight: 600; }
-        .match-item .time { width: 24%; text-align: center; color: var(--neon); font-weight: 800; font-size: 15px; }
+<style>
+:root {
+    --navy: #101e43;
+    --blue: #1749a5;
+    --electric: #2875ef;
+    --yellow: #ffda38;
+    --white: #ffffff;
+    --background: #f2f5fb;
+    --text: #172342;
+}
 
-        /* PANTALLA DE DETALLE (TUS FOTOS) */
-        #detail-screen { display: none; }
-        
-        .header-detail { background: var(--bg-darker); padding: 20px; position: relative; }
-        .match-title { font-size: 24px; font-weight: 800; line-height: 1.2; margin-bottom: 20px; }
-        .match-title span { color: var(--neon); }
-        
-        .info-row { display: flex; align-items: center; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500;}
-        .info-row svg { margin-right: 10px; fill: var(--text-muted); width: 16px; height: 16px; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        /* TARJETAS DE DATOS */
-        .card { background: var(--bg-card); border-radius: 15px; padding: 18px; margin: 15px 20px; }
-        
-        /* BARRAS DE ESTADÍSTICAS */
-        .stat-row { display: flex; align-items: center; margin-bottom: 12px; font-size: 11px; color: var(--text-muted); font-weight: 600;}
-        .stat-name { width: 25%; }
-        .stat-bar-bg { width: 65%; height: 8px; background: #1d3060; border-radius: 4px; margin: 0 10px; overflow: hidden; display: flex;}
-        .stat-bar-fill { height: 100%; background: var(--neon); border-radius: 4px; }
-        .stat-value { width: 10%; text-align: right; color: white; }
+body {
+    font-family: Arial, sans-serif;
+    background: var(--background);
+    color: var(--text);
+}
 
-        /* PICK IA */
-        .ai-pick { background: var(--bg-card); border: 1px solid var(--neon); border-radius: 15px; padding: 18px; margin: 15px 20px; position: relative;}
-        .ai-pick h3 { margin: 0 0 8px 0; color: var(--neon); font-size: 16px; font-weight: 800; display: flex; align-items: center;}
-        .ai-pick p { margin: 0; font-size: 13px; line-height: 1.5; font-weight: 500;}
-        .ai-pick .dropdown-icon { position: absolute; right: 15px; top: 18px; color: var(--neon); font-size: 18px; }
+header {
+    background: var(--navy);
+    color: white;
+    padding: 18px 6%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
 
-        /* LÍNEA DE TIEMPO Y JUGADORES (Placeholder visual) */
-        .timeline-container { margin: 15px 20px; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 20px; background: var(--bg-card); border-radius: 15px; text-align: center; }
-        .timeline-container p { color: var(--text-muted); font-size: 12px; }
+.logo {
+    font-size: 25px;
+    font-weight: 900;
+}
 
-        /* BOTÓN FLOTANTE */
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-main); padding: 15px 20px; border-top: 1px solid #1d3060; z-index: 100; display: flex; gap: 10px;}
-        .btn-floating { flex: 1; background: var(--neon); color: #000; border: none; padding: 15px; border-radius: 15px; font-weight: 800; font-size: 15px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 15px rgba(204, 255, 0, 0.3); }
-        .btn-floating-icon { background: #1d3060; color: white; border: none; width: 50px; border-radius: 15px; font-size: 20px; display: flex; justify-content: center; align-items: center;}
-        
-        .loader { text-align: center; color: var(--neon); font-weight: bold; padding: 40px; font-size: 14px;}
-    </style>
+.logo span {
+    color: var(--yellow);
+}
+
+header nav {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+header nav a:hover {
+    color: var(--yellow);
+}
+
+.hero {
+    background: linear-gradient(120deg, #101e43, #1749a5);
+    color: white;
+    padding: 65px 7%;
+}
+
+.hero h1 {
+    font-size: clamp(30px, 5vw, 48px);
+    margin-bottom: 15px;
+}
+
+.hero h1 span {
+    color: var(--yellow);
+}
+
+.hero p {
+    color: #d5def3;
+    line-height: 1.6;
+}
+
+.btn {
+    display: inline-block;
+    background: var(--yellow);
+    color: var(--navy);
+    padding: 13px 23px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 22px;
+}
+
+.container {
+    max-width: 1150px;
+    margin: auto;
+    padding: 35px 20px;
+}
+
+.section-title {
+    font-size: 23px;
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+}
+
+.card {
+    background: white;
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 4px 15px rgba(20,40,80,.06);
+    border: 1px solid #e5eaf3;
+}
+
+.card h3 {
+    margin-bottom: 12px;
+}
+
+.match {
+    background: var(--navy);
+    color: white;
+    padding: 25px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.teams {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 15px;
+    margin: 22px 0;
+}
+
+.team {
+    font-weight: bold;
+}
+
+.team-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.vs {
+    color: var(--yellow);
+    font-size: 25px;
+    font-weight: 900;
+}
+
+.badge {
+    display: inline-block;
+    background: var(--yellow);
+    color: var(--navy);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.table th, .table td {
+    padding: 13px 8px;
+    border-bottom: 1px solid #e8edf5;
+    text-align: left;
+    font-size: 13px;
+}
+
+.table th {
+    color: #66738d;
+}
+
+.table th:not(:first-child),
+.table td:not(:first-child) {
+    text-align: center;
+}
+
+.yellow {
+    color: #b38a00;
+    font-weight: bold;
+}
+
+.feature {
+    font-size: 32px;
+    margin-bottom: 13px;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+input {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #dce3ef;
+    border-radius: 8px;
+    margin: 10px 0;
+    font-size: 15px;
+}
+
+footer {
+    background: var(--navy);
+    color: white;
+    text-align: center;
+    padding: 30px;
+    margin-top: 30px;
+}
+
+footer span {
+    color: var(--yellow);
+}
+
+@media(max-width:600px) {
+    header {
+        justify-content: center;
+    }
+
+    header nav {
+        justify-content: center;
+        gap: 14px;
+    }
+
+    .hero {
+        padding: 45px 22px;
+    }
+
+    .teams {
+        gap: 8px;
+    }
+}
+</style>
 </head>
+
 <body>
 
-    <!-- BARRA SUPERIOR -->
-    <div class="top-bar">
-        <span class="back-btn" id="top-back" onclick="volverAtras()">←</span>
-        <span id="top-title">⭐ Sport Insights</span>
-        <span class="close-btn">✕</span>
-    </div>
+<header>
+    <div class="logo">FOOTY<span>START</span> ⚽</div>
 
-    <!-- PANTALLA 1: LISTA -->
-    <div id="main-screen">
-        <h1 style="font-size: 20px; margin-bottom: 20px; font-weight: 800;">Análisis de Partidos</h1>
-        <select id="league-select">
-            <optgroup label="Competiciones Europeas">
-                <option value="CL">UEFA Champions League</option>
-                <option value="EL">UEFA Europa League</option>
-            </optgroup>
-            <optgroup label="Grandes Ligas">
-                <option value="PD">La Liga (España)</option>
-                <option value="PL">Premier League (Inglaterra)</option>
-                <option value="SA">Serie A (Italia)</option>
-                <option value="BL1">Bundesliga (Alemania)</option>
-                <option value="FL1">Ligue 1 (Francia)</option>
-            </optgroup>
-        </select>
-        <input type="date" id="date-select">
-        <button id="fetch-btn" class="btn-search">Buscar Partidos</button>
-        <div id="results-list" style="margin-top: 20px;"></div>
-    </div>
+    <nav>
+        <a onclick="showPage('inicio')">Inicio</a>
+        <a onclick="showPage('partidos')">Partidos</a>
+        <a onclick="showPage('equipos')">Equipos</a>
+        <a onclick="showPage('jugadores')">Jugadores</a>
+        <a onclick="showPage('clasificacion')">Clasificación</a>
+        <a onclick="showPage('perfil')">Mi perfil</a>
+    </nav>
+</header>
 
-    <!-- PANTALLA 2: DETALLE -->
-    <div id="detail-screen">
-        <div class="header-detail">
-            <div class="match-title" id="ui-title">Equipo A vs <span>Equipo B</span></div>
-            
-            <div class="info-row">
-                <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>
-                <span id="ui-date">Fecha</span>
-            </div>
-            <div class="info-row">
-                <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                <span id="ui-time">Hora</span>
-            </div>
-            <div class="info-row">
-                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                <span id="ui-stadium">Estadio</span>
-            </div>
-        </div>
+<!-- INICIO -->
 
-        <div id="detail-content">
-            <!-- Aquí JS inyectará el análisis -->
-        </div>
+<main id="inicio" class="page active">
 
-        <!-- BOTÓN INFERIOR FIJO -->
-        <div class="bottom-bar">
-            <button class="btn-floating-icon">🏆</button>
-            <button class="btn-floating" onclick="volverAtras()">✓ Análisis IA Listo</button>
-        </div>
-    </div>
+<section class="hero">
+    <h1>Vive el fútbol.<br><span>Siente la pasión.</span></h1>
+    <p>Bienvenido a FootyStart, tu plataforma para descubrir<br>
+    equipos, jugadores, partidos y talentos del fútbol.</p>
 
-    <script src="app.js"></script>
-</body>
-</html>
+    <button class="btn" onclick="showPage('jugadores')">
+        DESCUBRIR JUGADORES →
+    </button>
+</section>
+
+<div class="container">
+
+    <h2 class="section-title">⚽ Partido destacado</h2>
+
+    <div class="match">
+        <span class="badge">LA LIGA</span>
+
+        <div class="teams">
+            <div class="team">
+                <div class="team-icon">.             </div>
+                
+            </div>
+
+            <div class="vs">VS</div>
+
+            <div class="team">
+                <div class="team-icon">      </div> 
+                
+            </div>
+        </div>
+
+        <p>31 Octubre · 21:00</p>
+    </div>
+
+    <br>
+
+    <h2 class="section-title">Explora FootyStart</h2>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="feature">👤</div>
+            <h3>Jugadores</h3>
+            <p>Descubre futbolistas y jóvenes promesas.</p>
+            <button class="btn" onclick="showPage('jugadores')">
+                Explorar
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="feature">🛡️</div>
+            <h3>Equipos</h3>
+            <p>Conoce clubes, plantillas y entrenadores.</p>
+            <button class="btn" onclick="showPage('equipos')">
+                Explorar
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="feature">🏆</div>
+            <h3>Competiciones</h3>
+            <p>Consulta ligas, torneos y clasificaciones.</p>
+            <button class="btn" onclick="showPage('clasificacion')">
+                Explorar
+            </button>
+        </div>
+
+    </div>
+
+</div>
+</main>
+
+<!-- PARTIDOS -->
+
+<section id="partidos" class="page container">
+
+    <h2 class="section-title">⚽ Partidos</h2>
+
+    <div class="card">
+        <h3>Próximos encuentros</h3>
+        <p>Real Madrid vs Valencia CF</p>
+        <p>Barcelona vs Atlético de Madrid</p>
+        <p>Sevilla FC vs Betis</p>
+        <br>
+        <small>Calendario de demostración.</small>
+    </div>
+
+</section>
+
+<!-- EQUIPOS -->
+
+<section id="equipos" class="page container">
+
+    <h2 class="section-title">🛡️ Equipos</h2>
+
+    <div class="grid">
+
+        <div class="card">
+            <
