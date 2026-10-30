@@ -1,1 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.superfooty.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    
+    <name>SuperFooty</name>
+    <description>Análisis de fútbol impulsado por Inteligencia Artificial.</description>
+    <author email="soporte@superfooty.com" href="https://superfooty.com">
+        SuperFooty Team
+    </author>
 
+    <!-- Le dice a la app que abra el index.html de la carpeta www -->
+    <content src="index.html" />
+
+    <!-- Permisos para conectar con la IA de Google y cualquier web -->
+    <access origin="*" />
+    <allow-navigation href="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+
+    <!-- Forzar a que la app siempre esté en vertical -->
+    <preference name="Orientation" value="portrait" />
+    
+    <!-- Color de fondo de la app (el mismo azul oscuro de tu diseño) -->
+    <preference name="BackgroundColor" value="0xff101e43" />
+    
+</widget>
