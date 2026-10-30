@@ -38,13 +38,12 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama-3.1-70b-versatile', // 👈 Modelo actualizado y válido
+                model: 'llama-3.3-70b-versatile', // 👈 Modelo actualizado y activo
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.7
             })
         });
         
-        // Comprobamos si Groq nos rechaza la petición
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(`Error de Groq (${response.status}): ${errorData.error ? errorData.error.message : 'Revisa tu clave'}`);
@@ -53,7 +52,6 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
         const data = await response.json();
         let content = data.choices[0].message.content;
         
-        // TRUCO PARA LIMPIAR LA RESPUESTA DE LA IA:
         const startIndex = content.indexOf('[');
         const endIndex = content.lastIndexOf(']');
         if (startIndex !== -1 && endIndex !== -1) {
@@ -113,7 +111,7 @@ async function analizarPartido(local, visita, fecha) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama-3.1-70b-versatile', // 👈 Modelo actualizado y válido
+                model: 'llama-3.3-70b-versatile', // 👈 Modelo actualizado y activo
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.6
             })
@@ -126,7 +124,6 @@ async function analizarPartido(local, visita, fecha) {
         const data = await response.json();
         let content = data.choices[0].message.content;
         
-        // Limpiamos la respuesta
         const startIndex = content.indexOf('{');
         const endIndex = content.lastIndexOf('}');
         if (startIndex !== -1 && endIndex !== -1) {
@@ -173,4 +170,5 @@ async function analizarPartido(local, visita, fecha) {
     } catch (error) {
         contentDiv.innerHTML = `<p style="color: red; text-align:center;">Error al generar el análisis de IA.</p>`;
     }
-}
+        }
+                        
