@@ -1,9 +1,8 @@
 // ==========================================
 // CONFIGURACIÓN DE CLAVES (SOLO GROQ)
 // ==========================================
-const GROQ_API_KEY = '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'; // ⚠️ PON TU CLAVE AQUÍ
+const GROQ_API_KEY = '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'; // ⚠️ PON TU CLAVE AQUÍ (empieza por gsk_)
 
-// Poner la fecha real de tu móvil (2026)
 document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date-select');
     const hoy = new Date();
@@ -31,7 +30,7 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
     listDiv.innerHTML = '<div class="loader">🧠 La IA está buscando los mejores partidos... ⏳</div>';
 
     const prompt = `Genera 4 enfrentamientos de fútbol realistas para la competición "${leagueName}" en la fecha ${dateSelected}.
-    Devuelve ÚNICAMENTE un array JSON válido con este formato exacto, sin texto adicional ni formato markdown:
+    Devuelve ÚNICAMENTE un array JSON válido con este formato exacto, sin texto adicional, sin saludos y sin bloques de código markdown:
     [{"local": "Nombre Equipo Local", "visita": "Nombre Equipo Visita", "hora": "20:00"}, ...]`;
 
     try {
@@ -45,11 +44,23 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
             })
         });
         
+        // Comprobamos si Groq nos rechaza la petición (Error 401 = Clave mal)
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Error de Groq (${response.status}): ${errorData.error ? errorData.error.message : 'Revisa tu clave'}`);
+        }
+
         const data = await response.json();
         let content = data.choices[0].message.content;
         
-        // Limpiamos el JSON por si la IA añade texto extra
-        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        // TRUCO PARA LIMPIAR LA RESPUESTA DE LA IA:
+        // Buscamos el primer '[' y el último ']' para extraer solo el JSON válido
+        const startIndex = content.indexOf('[');
+        const endIndex = content.lastIndexOf(']');
+        if (startIndex !== -1 && endIndex !== -1) {
+            content = content.substring(startIndex, endIndex + 1);
+        }
+        
         const matches = JSON.parse(content);
 
         listDiv.innerHTML = matches.map(match => {
@@ -63,7 +74,8 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
         }).join('');
 
     } catch (error) {
-        listDiv.innerHTML = `<p style="color: #ff6b6b; text-align:center; padding: 20px;">⚠️ Error generando partidos. Revisa tu clave de Groq.</p>`;
+        // Si falla, mostramos el error real en pantalla
+        listDiv.innerHTML = `<p style="color: #ff6b6b; text-align:center; padding: 20px; background: #14264f; border-radius:10px; font-size: 13px;">⚠️ ${error.message}</p>`;
     }
 });
 
@@ -109,9 +121,20 @@ async function analizarPartido(local, visita, fecha) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error("Error al conectar con la IA.");
+        }
+
         const data = await response.json();
         let content = data.choices[0].message.content;
-        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        // Limpiamos la respuesta
+        const startIndex = content.indexOf('{');
+        const endIndex = content.lastIndexOf('}');
+        if (startIndex !== -1 && endIndex !== -1) {
+            content = content.substring(startIndex, endIndex + 1);
+        }
+
         const pred = JSON.parse(content);
 
         let html = `
@@ -152,4 +175,4 @@ async function analizarPartido(local, visita, fecha) {
     } catch (error) {
         contentDiv.innerHTML = `<p style="color: red; text-align:center;">Error al generar el análisis de IA.</p>`;
     }
-}
+                                                                                         }
