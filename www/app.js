@@ -2,9 +2,24 @@
 // CONFIGURACIÓN DE CLAVES
 // ==========================================
 const FOOTBALL_DATA_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; 
-const GROQ_API_KEY = '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'; // ⚠️ PON TU CLAVE DE GROQ AQUÍ
+const GROQ_API_KEY = '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'; // ⚠️ PON TU CLAVE AQUÍ
+
+// ==========================================
+// FECHA AUTOMÁTICA (Adaptada para que la API funcione)
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('date-select').value = '2024-05-20'; 
+    const dateInput = document.getElementById('date-select');
+    const hoy = new Date();
+    
+    // Cogemos el día de hoy, pero forzamos el año 2024 porque la API no tiene datos de 2026
+    let year = '2024'; 
+    let month = String(hoy.getMonth() + 1).padStart(2, '0');
+    let day = String(hoy.getDate()).padStart(2, '0');
+    
+    // Si quieres asegurarte de ver partidos, pon una fecha de fin de semana de 2024
+    // dateInput.value = '2024-10-27'; 
+    
+    dateInput.value = `${year}-${month}-${day}`; 
 });
 
 function volverAtras() {
@@ -17,31 +32,29 @@ function volverAtras() {
 }
 
 // ==========================================
-// 1. BUSCAR PARTIDOS (CON PROXY PARA EVITAR BLOQUEOS)
+// 1. BUSCAR PARTIDOS
 // ==========================================
 document.getElementById('fetch-btn').addEventListener('click', async () => {
     const leagueCode = document.getElementById('league-select').value;
     const listDiv = document.getElementById('results-list');
-    const dateSelected = '2024-05-20'; 
+    const dateSelected = document.getElementById('date-select').value; 
     
     listDiv.innerHTML = '<div class="loader">Buscando partidos... ⏳</div>';
 
     try {
-        // Usamos un proxy gratuito para saltar el bloqueo CORS y de red
+        // Usamos un proxy para evitar bloqueos de red
         const apiUrl = `https://api.football-data.org/v4/competitions/${leagueCode}/matches?dateFrom=${dateSelected}&dateTo=${dateSelected}`;
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(proxyUrl, {
             method: 'GET', 
-            headers: { 
-                'X-Auth-Token': FOOTBALL_DATA_KEY.trim() // .trim() quita espacios en blanco ocultos
-            }
+            headers: { 'X-Auth-Token': FOOTBALL_DATA_KEY.trim() }
         });
         
         if (!response.ok) {
             if (response.status === 429) throw new Error("Límite de peticiones alcanzado. Espera 1 minuto.");
             if (response.status === 403) throw new Error("Token incorrecto.");
-            throw new Error(`Error del servidor: ${response.status}`);
+            throw new Error(`Error de red (${response.status})`);
         }
 
         const data = await response.json();
@@ -62,7 +75,7 @@ document.getElementById('fetch-btn').addEventListener('click', async () => {
                 `;
             }).join('');
         } else {
-            listDiv.innerHTML = `<p style="text-align:center; color: #ccff00; padding:20px;">La API dice que no hay partidos para esta liga en esta fecha.</p>`;
+            listDiv.innerHTML = `<p style="text-align:center; color: #ccff00; padding:20px;">No hay partidos para esta liga en esta fecha. Prueba a cambiar la fecha a un fin de semana.</p>`;
         }
 
     } catch (error) {
@@ -163,6 +176,6 @@ async function generarAnalisisGroq(local, visita) {
             return "El análisis de IA no está disponible en este momento.";
         }
     } catch (e) {
-        return "Partido muy interesante según las estadísticas. Se espera un encuentro muy disputado entre ambos equipos.";
+        return "Partido muy interesante según las estadísticas. Se espera un encuentro muy disputado.";
     }
 }
