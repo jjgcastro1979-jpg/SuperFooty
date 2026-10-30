@@ -1,17 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#081124">
-    <title>Sport Insights</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+    <title>Sport Insights IA</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+        
         :root {
             --bg-main: #081124;
             --bg-card: #0f1c3f;
@@ -20,353 +15,122 @@
             --text-muted: #a8b2d1;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background-color: var(--bg-main); color: #ffffff; padding-bottom: 80px; }
+        
+        /* BARRA SUPERIOR */
+        .top-bar { background-color: var(--neon); color: #000; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15px; border-radius: 0 0 20px 20px; position: sticky; top: 0; z-index: 100; }
+        .top-bar .back-btn { font-size: 18px; cursor: pointer; display: none; }
+        .top-bar .close-btn { font-size: 20px; cursor: pointer; }
+        
+        /* PANTALLA PRINCIPAL */
+        #main-screen { padding: 20px; }
+        select, input[type="date"] { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-card); color: white; border: 1px solid #1d3060; border-radius: 12px; font-family: 'Montserrat'; font-size: 14px; box-sizing: border-box; }
+        .btn-search { width: 100%; padding: 16px; background: var(--neon); color: #000; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(204, 255, 0, 0.2); }
+        
+        /* LISTA DE PARTIDOS */
+        .match-item { background: var(--bg-card); padding: 18px 15px; margin-bottom: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 4px solid var(--neon); }
+        .match-item:active { background: #162a5a; }
+        .match-item .team-name { width: 38%; font-size: 14px; font-weight: 600; }
+        .match-item .time { width: 24%; text-align: center; color: var(--neon); font-weight: 800; font-size: 15px; }
 
-        body {
-            font-family: 'Montserrat', sans-serif;
-            margin: 0;
-            padding: 0 0 80px;
-            background-color: var(--bg-main);
-            color: #ffffff;
-        }
+        /* PANTALLA DE DETALLE (TUS FOTOS) */
+        #detail-screen { display: none; }
+        
+        .header-detail { background: var(--bg-darker); padding: 20px; position: relative; }
+        .match-title { font-size: 24px; font-weight: 800; line-height: 1.2; margin-bottom: 20px; }
+        .match-title span { color: var(--neon); }
+        
+        .info-row { display: flex; align-items: center; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500;}
+        .info-row svg { margin-right: 10px; fill: var(--text-muted); width: 16px; height: 16px; }
 
-        .top-bar {
-            background-color: var(--neon);
-            color: #000;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 800;
-            font-size: 18px;
-            border-radius: 0 0 20px 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+        /* TARJETAS DE DATOS */
+        .card { background: var(--bg-card); border-radius: 15px; padding: 18px; margin: 15px 20px; }
+        
+        /* BARRAS DE ESTADÍSTICAS */
+        .stat-row { display: flex; align-items: center; margin-bottom: 12px; font-size: 11px; color: var(--text-muted); font-weight: 600;}
+        .stat-name { width: 25%; }
+        .stat-bar-bg { width: 65%; height: 8px; background: #1d3060; border-radius: 4px; margin: 0 10px; overflow: hidden; display: flex;}
+        .stat-bar-fill { height: 100%; background: var(--neon); border-radius: 4px; }
+        .stat-value { width: 10%; text-align: right; color: white; }
 
-        .top-bar .back-btn {
-            font-size: 22px;
-            cursor: pointer;
-            display: none;
-        }
+        /* PICK IA */
+        .ai-pick { background: var(--bg-card); border: 1px solid var(--neon); border-radius: 15px; padding: 18px; margin: 15px 20px; position: relative;}
+        .ai-pick h3 { margin: 0 0 8px 0; color: var(--neon); font-size: 16px; font-weight: 800; display: flex; align-items: center;}
+        .ai-pick p { margin: 0; font-size: 13px; line-height: 1.5; font-weight: 500;}
+        .ai-pick .dropdown-icon { position: absolute; right: 15px; top: 18px; color: var(--neon); font-size: 18px; }
 
-        .top-bar .close-btn {
-            font-size: 24px;
-            cursor: pointer;
-        }
+        /* LÍNEA DE TIEMPO Y JUGADORES (Placeholder visual) */
+        .timeline-container { margin: 15px 20px; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 20px; background: var(--bg-card); border-radius: 15px; text-align: center; }
+        .timeline-container p { color: var(--text-muted); font-size: 12px; }
 
-        #main-screen {
-            padding: 20px;
-        }
-
-        select,
-        input[type="date"] {
-            width: 100%;
-            padding: 17px;
-            margin-bottom: 15px;
-            background: var(--bg-card);
-            color: white;
-            border: 1px solid #1d3060;
-            border-radius: 12px;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 15px;
-        }
-
-        .btn-search {
-            width: 100%;
-            padding: 18px;
-            background: var(--neon);
-            color: #000;
-            border: none;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 17px;
-            cursor: pointer;
-        }
-
-        .match-item {
-            background: var(--bg-card);
-            padding: 18px 15px;
-            margin-bottom: 12px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            border-left: 4px solid var(--neon);
-            gap: 8px;
-        }
-
-        .match-item:active {
-            background: #162a5a;
-        }
-
-        .match-item .team-name {
-            width: 38%;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .match-item .time {
-            width: 24%;
-            text-align: center;
-            color: var(--neon);
-            font-weight: 800;
-            font-size: 14px;
-        }
-
-        #detail-screen {
-            display: none;
-        }
-
-        .header-detail {
-            background: var(--bg-darker);
-            padding: 20px;
-        }
-
-        .match-title {
-            font-size: 24px;
-            font-weight: 800;
-            line-height: 1.3;
-            margin-bottom: 20px;
-        }
-
-        .match-title span {
-            color: var(--neon);
-        }
-
-        .info-row {
-            display: flex;
-            align-items: center;
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-
-        .info-row svg {
-            margin-right: 10px;
-            fill: var(--text-muted);
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
-        }
-
-        .card {
-            background: var(--bg-card);
-            border-radius: 15px;
-            padding: 18px;
-            margin: 15px 20px;
-        }
-
-        .stat-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .stat-name {
-            width: 25%;
-        }
-
-        .stat-bar-bg {
-            width: 65%;
-            height: 8px;
-            background: #1d3060;
-            border-radius: 4px;
-            margin: 0 10px;
-            overflow: hidden;
-        }
-
-        .stat-bar-fill {
-            height: 100%;
-            background: var(--neon);
-            border-radius: 4px;
-        }
-
-        .stat-value {
-            width: 10%;
-            text-align: right;
-            color: white;
-        }
-
-        .ai-pick {
-            background: var(--bg-card);
-            border: 1px solid var(--neon);
-            border-radius: 15px;
-            padding: 18px;
-            margin: 15px 20px;
-            position: relative;
-        }
-
-        .ai-pick h3 {
-            margin: 0 0 8px;
-            color: var(--neon);
-            font-size: 16px;
-            font-weight: 800;
-        }
-
-        .ai-pick p {
-            margin: 0;
-            font-size: 13px;
-            line-height: 1.6;
-            font-weight: 500;
-        }
-
-        .timeline-container {
-            margin: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            padding: 20px;
-            background: var(--bg-card);
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .timeline-container p {
-            color: var(--text-muted);
-            font-size: 12px;
-        }
-
-        .bottom-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-main);
-            padding: 15px 20px;
-            border-top: 1px solid #1d3060;
-            z-index: 100;
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-floating {
-            flex: 1;
-            background: var(--neon);
-            color: #000;
-            border: none;
-            padding: 15px;
-            border-radius: 15px;
-            font-weight: 800;
-            font-size: 15px;
-            cursor: pointer;
-        }
-
-        .btn-floating-icon {
-            background: #1d3060;
-            color: white;
-            border: none;
-            width: 50px;
-            border-radius: 15px;
-            font-size: 20px;
-        }
-
-        .loader {
-            text-align: center;
-            color: var(--neon);
-            font-weight: bold;
-            padding: 40px 15px;
-            font-size: 14px;
-        }
-
-        .error-message {
-            color: #ff4545;
-            text-align: center;
-            padding: 15px;
-            line-height: 1.5;
-        }
+        /* BOTÓN FLOTANTE */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-main); padding: 15px 20px; border-top: 1px solid #1d3060; z-index: 100; display: flex; gap: 10px;}
+        .btn-floating { flex: 1; background: var(--neon); color: #000; border: none; padding: 15px; border-radius: 15px; font-weight: 800; font-size: 15px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 15px rgba(204, 255, 0, 0.3); }
+        .btn-floating-icon { background: #1d3060; color: white; border: none; width: 50px; border-radius: 15px; font-size: 20px; display: flex; justify-content: center; align-items: center;}
+        
+        .loader { text-align: center; color: var(--neon); font-weight: bold; padding: 40px; font-size: 14px;}
     </style>
 </head>
-
 <body>
 
+    <!-- BARRA SUPERIOR -->
     <div class="top-bar">
         <span class="back-btn" id="top-back" onclick="volverAtras()">←</span>
         <span id="top-title">⭐ Sport Insights</span>
         <span class="close-btn">✕</span>
     </div>
 
+    <!-- PANTALLA 1: LISTA -->
     <div id="main-screen">
-        <h1 style="font-size: 24px; margin-bottom: 20px; font-weight: 800;">
-            Análisis de Partidos
-        </h1>
-
-        <label for="league-select">Selecciona una competición</label>
-
+        <h1 style="font-size: 20px; margin-bottom: 20px; font-weight: 800;">Análisis de Partidos</h1>
         <select id="league-select">
-            <optgroup label="Competiciones europeas">
-                <option value="2">UEFA Champions League</option>
+            <optgroup label="Competiciones Europeas">
+                <option value="CL">UEFA Champions League</option>
+                <option value="EL">UEFA Europa League</option>
             </optgroup>
-
-            <optgroup label="Grandes ligas">
-                <option value="140">La Liga (España)</option>
-                <option value="39">Premier League (Inglaterra)</option>
-                <option value="135" selected>Serie A (Italia)</option>
-                <option value="78">Bundesliga (Alemania)</option>
-                <option value="61">Ligue 1 (Francia)</option>
+            <optgroup label="Grandes Ligas">
+                <option value="PD">La Liga (España)</option>
+                <option value="PL">Premier League (Inglaterra)</option>
+                <option value="SA">Serie A (Italia)</option>
+                <option value="BL1">Bundesliga (Alemania)</option>
+                <option value="FL1">Ligue 1 (Francia)</option>
             </optgroup>
         </select>
-
-        <label for="date-select">Selecciona la fecha</label>
         <input type="date" id="date-select">
-
-        <button id="fetch-btn" class="btn-search">
-            Buscar Partidos
-        </button>
-
+        <button id="fetch-btn" class="btn-search">Buscar Partidos</button>
         <div id="results-list" style="margin-top: 20px;"></div>
     </div>
 
+    <!-- PANTALLA 2: DETALLE -->
     <div id="detail-screen">
-
         <div class="header-detail">
-            <div class="match-title" id="ui-title">
-                Equipo A vs <span>Equipo B</span>
-            </div>
-
+            <div class="match-title" id="ui-title">Equipo A vs <span>Equipo B</span></div>
+            
             <div class="info-row">
-                <svg viewBox="0 0 24 24">
-                    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/>
-                </svg>
+                <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>
                 <span id="ui-date">Fecha</span>
             </div>
-
             <div class="info-row">
-                <svg viewBox="0 0 24 24">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                </svg>
+                <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
                 <span id="ui-time">Hora</span>
             </div>
-
             <div class="info-row">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
-                <span id="ui-stadium">Estadio por confirmar</span>
+                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                <span id="ui-stadium">Estadio</span>
             </div>
         </div>
 
-        <div id="detail-content"></div>
-
-        <div class="bottom-bar">
-            <button class="btn-floating-icon">🏆</button>
-            <button class="btn-floating" onclick="volverAtras()">
-                ✓ Volver a partidos
-            </button>
+        <div id="detail-content">
+            <!-- Aquí JS inyectará el análisis -->
         </div>
 
+        <!-- BOTÓN INFERIOR FIJO -->
+        <div class="bottom-bar">
+            <button class="btn-floating-icon">🏆</button>
+            <button class="btn-floating" onclick="volverAtras()">✓ Análisis IA Listo</button>
+        </div>
     </div>
 
     <script src="app.js"></script>
-
 </body>
 </html>
