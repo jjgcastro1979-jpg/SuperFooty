@@ -20,6 +20,6 @@
     <preference name="Orientation" value="portrait" />
     
     <!-- Color de fondo de la app (el mismo azul oscuro de tu diseño) -->
-    <preference name="BackgroundColor" value="0xff101e43" />
+    <preference name="BackgroundColor" value="#101e43" />
     
 </widget>
