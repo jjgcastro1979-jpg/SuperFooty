@@ -10,5 +10,12 @@
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     
+    <!-- CONFIGURACIÓN PARA SALTAR BLOQUEOS CORS -->
+    <preference name="Scheme" value="http" />
+    <preference name="Hostname" value="localhost" />
+    <preference name="AndroidInsecureFileModeEnabled" value="true" />
     <preference name="Orientation" value="portrait" />
+
+    <!-- EL PUENTE NATIVO PARA CONECTAR CON GOAL API -->
+    <plugin name="cordova-plugin-advanced-http" spec="3.3.1" />
 </widget>
