@@ -1,77 +1,61 @@
-// ==========================================
-// CLAVE DE GOOGLE GEMINI
-// ==========================================
-const GEMINI_API_KEY = ''AIzaSyB3N_pB7O8K5w4G9x2F1vC6d7M8n9J0kL1';'; // ⚠️ PON TU CLAVE AQUÍ
+const GEMINI_API_KEY = 'AIzaSyB3N_pB7O8K5w4G9x2F1vC6d7M8n9J0kL1';
 
-// ==========================================
-// CONEXIÓN NATIVA CON TEMPORIZADOR DE SEGURIDAD
-// ==========================================
 async function consultarGemini(prompt) {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const bodyData = {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7 }
-    };
-
     return new Promise((resolve, reject) => {
-        // Temporizador: Si en 12 segundos no hay respuesta, lanzamos error
         const timeout = setTimeout(() => {
-            reject(new Error("Tiempo de espera agotado. Google no responde. Revisa tu conexión a internet o la clave API."));
-        }, 12000);
+            reject(new Error("Tiempo de espera agotado."));
+        }, 15000);
 
-        if (window.cordova && cordova.plugin && cordova.plugin.http) {
-            // Usamos el plugin nativo (APK)
-            cordova.plugin.http.post(apiUrl, bodyData, { 'Content-Type': 'application/json' }, (response) => {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        
+        const bodyData = JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+        });
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", apiUrl, true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.setRequestHeader("X-goog-api-key", GEMINI_API_KEY);
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
                 clearTimeout(timeout);
-                try {
-                    const data = JSON.parse(response.data);
-                    if(data.candidates && data.candidates.length > 0) {
-                        resolve(data.candidates[0].content.parts[0].text);
-                    } else {
-                        reject(new Error("Google respondió pero sin partidos. Inténtalo otra vez."));
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if(data.candidates && data.candidates.length > 0) {
+                            resolve(data.candidates[0].content.parts[0].text);
+                        } else {
+                            reject(new Error("Google no devolvió resultados."));
+                        }
+                    } catch(e) {
+                        reject(new Error("Error al leer respuesta."));
                     }
-                } catch(e) {
-                    reject(new Error("Error al leer la respuesta de Google."));
-                }
-            }, (error) => {
-                clearTimeout(timeout);
-                reject(new Error(`Error de red nativo: Código ${error.status || 'Desconocido'}. ¿Tienes internet?`));
-            });
-        } else {
-            // Si estamos en el navegador web
-            fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bodyData)
-            })
-            .then(res => {
-                clearTimeout(timeout);
-                if(!res.ok) throw new Error(`Error web: ${res.status}`);
-                return res.json();
-            })
-            .then(data => {
-                if(data.candidates && data.candidates.length > 0) {
-                    resolve(data.candidates[0].content.parts[0].text);
                 } else {
-                    reject(new Error("La IA no devolvió resultados."));
+                    try {
+                        const errData = JSON.parse(xhr.responseText);
+                        reject(new Error(`Error ${xhr.status}: ${errData[0].error.message}`));
+                    } catch(e) {
+                        reject(new Error(`Error de red: ${xhr.status}`));
+                    }
                 }
-            })
-            .catch(err => {
-                clearTimeout(timeout);
-                reject(new Error(`Fallo web: ${err.message}`));
-            });
-        }
+            }
+        };
+
+        xhr.onerror = function () {
+            clearTimeout(timeout);
+            reject(new Error("Error de conexión. Verifica tu internet."));
+        };
+
+        xhr.send(bodyData);
     });
 }
 
-// ==========================================
-// 1. CARGAR PARTIDOS
-// ==========================================
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = "<div class='loader'>🧠 La IA está generando partidos... ⏳</div>";
 
-    const prompt = `Genera 4 partidos de fútbol emocionantes. Devuelve SOLO un array JSON válido, sin texto extra, sin markdown:
+    const prompt = `Genera 4 partidos de fútbol emocionantes. Devuelve SOLO un array JSON válido:
     [{"local": "Equipo A", "visita": "Equipo B", "hora": "20:00", "liga": "La Liga"}]`;
 
     try {
@@ -105,9 +89,6 @@ async function cargarPartidos() {
     }
 }
 
-// ==========================================
-// 2. ANÁLISIS DEL PARTIDO
-// ==========================================
 async function analizarPartido(local, visita, index) {
     const caja = document.getElementById(`analisis-${index}`);
     
@@ -119,9 +100,7 @@ async function analizarPartido(local, visita, index) {
     caja.style.display = 'block';
     caja.innerHTML = "<p>🧠 Analizando tácticas...</p>";
 
-    const prompt = `Actúa como analista de "SuperFooty". Analiza el partido ${local} vs ${visita}. 
-    Escribe un análisis breve (máximo 3 frases) en español. 
-    Di quién ganará, si habrá más o menos de 2.5 goles y si ambos marcarán. Sé directo.`;
+    const prompt = `Analiza el partido ${local} vs ${visita} en 3 frases. Di quién ganará.`;
 
     try {
         const respuesta = await consultarGemini(prompt);
