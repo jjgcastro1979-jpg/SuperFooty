@@ -13,7 +13,7 @@ async function consultarGemini(prompt) {
         generationConfig: { temperature: 0.7 }
     };
 
-    // Si el plugin nativo está disponible (en la APK), lo usamos
+    // Intentamos usar el plugin nativo (Cordova)
     if (window.cordova && cordova.plugin && cordova.plugin.http) {
         return new Promise((resolve, reject) => {
             cordova.plugin.http.post(apiUrl, bodyData, { 'Content-Type': 'application/json' }, (response) => {
@@ -24,23 +24,12 @@ async function consultarGemini(prompt) {
                     reject(new Error("Error procesando la respuesta de Google"));
                 }
             }, (error) => {
-                reject(new Error(`Error nativo de Google: ${error.status}`));
+                reject(new Error(`Error nativo: ${error.status}`));
             });
         });
-    }
-
-    // Si estamos en el navegador web, usamos fetch normal
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bodyData)
-        });
-        if (!response.ok) throw new Error("Error de red en navegador");
-        const data = await response.json();
-        return data.candidates[0].content.parts[0].text;
-    } catch (e) {
-        throw new Error(`Fallo web: ${e.message}`);
+    } else {
+        // Si no está el plugin, es que estamos en el navegador
+        throw new Error("El puente nativo no está listo. Si estás en la APK, reinstálala.");
     }
 }
 
@@ -109,4 +98,4 @@ async function analizarPartido(local, visita, index) {
     } catch (error) {
         caja.innerHTML = `<p style='color:red; font-size:12px;'>${error.message}</p>`;
     }
-}
+                           }
