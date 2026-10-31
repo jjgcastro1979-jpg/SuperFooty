@@ -1,4 +1,5 @@
-const GEMINI_API_KEY = 'AQ.Ab8RN6KOuBi5izAFwPq1S_uQBYrSKTfXFsuHE4SSfGDcTilNwg';
+
+const GEMINI_API_KEY = 'AQ.Ab8RN6Kf-CUT_40yAqHaawuRZWhw-CMDsCizTQthJKYmtdW9oQ'; 
 
 async function consultarGemini(prompt) {
     return new Promise((resolve, reject) => {
@@ -6,7 +7,8 @@ async function consultarGemini(prompt) {
             reject(new Error("Tiempo de espera agotado."));
         }, 15000);
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        // Endpoint estándar con la clave en la URL
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
         const bodyData = JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }]
@@ -15,7 +17,6 @@ async function consultarGemini(prompt) {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", apiUrl, true);
         xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.setRequestHeader("X-goog-api-key", GEMINI_API_KEY);
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
@@ -23,11 +24,7 @@ async function consultarGemini(prompt) {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const data = JSON.parse(xhr.responseText);
-                        if(data.candidates && data.candidates.length > 0) {
-                            resolve(data.candidates[0].content.parts[0].text);
-                        } else {
-                            reject(new Error("Google no devolvió resultados."));
-                        }
+                        resolve(data.candidates[0].content.parts[0].text);
                     } catch(e) {
                         reject(new Error("Error al leer respuesta."));
                     }
@@ -100,7 +97,7 @@ async function analizarPartido(local, visita, index) {
     caja.style.display = 'block';
     caja.innerHTML = "<p>🧠 Analizando tácticas...</p>";
 
-    const prompt = `Analiza el partido ${local} vs ${visita} en 3 frases. Di quién ganará.`;
+    const prompt = `Actúa como analista de "SuperFooty". Analiza el partido ${local} vs ${visita} en 3 frases. Di quién ganará.`;
 
     try {
         const respuesta = await consultarGemini(prompt);
@@ -108,4 +105,4 @@ async function analizarPartido(local, visita, index) {
     } catch (error) {
         caja.innerHTML = `<p style='color:red; font-size:12px;'>${error.message}</p>`;
     }
-}
+                    }
