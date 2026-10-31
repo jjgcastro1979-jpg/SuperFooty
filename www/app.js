@@ -1,7 +1,7 @@
 // ==========================================
 // CLAVE DE GOOGLE GEMINI
 // ==========================================
-const GEMINI_API_KEY = 'AQ.Ab8RN6LCG9Bz-WqoaUL0RIAQEcJ56ieeD-CSg0RSuGI-r_KS0g'; // ⚠️ PON TU CLAVE AQUÍ
+const GEMINI_API_KEY = 'AQ.Ab8RN6IKX1XVKqaLtSAlSTr55-4RJZrhykoap_tVWcrBhyuSjQ'; // ⚠️ PON TU CLAVE AQUÍ
 
 // ==========================================
 // CONEXIÓN NATIVA CON TEMPORIZADOR DE SEGURIDAD
