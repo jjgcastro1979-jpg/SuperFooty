@@ -1,68 +1,118 @@
-async function consultarGemini(prompt) {
-    try {
-        // Usamos Puter.js para conectar con Gemini sin claves API
-        const respuesta = await puter.ai.chat(prompt, { model: 'google/gemini-2.5-flash' });
-        return respuesta;
-    } catch (error) {
-        throw new Error("La IA no pudo responder. Revisa tu conexión.");
-    }
-}
+// ==========================================
+// API-FOOTBALL (Datos y Predicciones Reales)
+// ==========================================
+// Usamos tu clave de API-Football que ya teníamos
+const API_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; 
+const API_HOST = 'https://v3.football.api-sports.io';
 
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
-    listaDiv.innerHTML = "<div class='loader'>🧠 La IA está generando partidos... ⏳</div>";
+    listaDiv.innerHTML = "<div class='loader'>Buscando partidos reales de hoy... ⏳</div>";
 
-    const prompt = `Genera 4 partidos de fútbol emocionantes. Devuelve SOLO un array JSON válido:
-    [{"local": "Equipo A", "visita": "Equipo B", "hora": "20:00", "liga": "La Liga"}]`;
+    // Para evitar el problema del año 2026, forzamos una fecha de 2024 donde seguro hay partidos
+    const fechaReal = '2024-05-20'; 
+    const ligaId = '140'; // 140 = La Liga
 
-    try {
-        let respuesta = await consultarGemini(prompt);
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const url = `${API_HOST}/fixtures?league=${ligaId}&season=2023&date=${fechaReal}`;
         
-        const inicio = respuesta.indexOf('[');
-        const fin = respuesta.lastIndexOf(']');
-        if(inicio !== -1 && fin !== -1) respuesta = respuesta.substring(inicio, fin + 1);
-        
-        const partidos = JSON.parse(respuesta);
+        xhr.open("GET", url, true);
+        xhr.setRequestHeader("x-apisports-key", API_KEY);
 
-        listaDiv.innerHTML = partidos.map((p, i) => `
-            <div class="match-card" onclick="analizarPartido('${p.local}', '${p.visita}', ${i})">
-                <div class="match-header">
-                    <span class="league-badge">${p.liga}</span>
-                    <span class="match-time">⏰ ${p.hora}</span>
-                </div>
-                <div class="teams-row">
-                    <div class="team-name">${p.local}</div>
-                    <div class="vs-badge">VS</div>
-                    <div class="team-name right">${p.visita}</div>
-                </div>
-                <div id="analisis-${i}" class="ia-box"></div>
-            </div>
-        `).join('');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.response && data.response.length > 0) {
+                            // Pintamos los partidos reales
+                            listaDiv.innerHTML = data.response.map(match => {
+                                const local = match.teams.home.name;
+                                const visita = match.teams.away.name;
+                                const hora = new Date(match.fixture.date).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+                                const idPartido = match.fixture.id;
 
-    } catch (error) {
-        listaDiv.innerHTML = `<div style='color:red; text-align:center; padding:20px; background:#ffeeee; border-radius:10px; border:1px solid red; font-size:13px;'>
-            <strong>⚠️ Error:</strong><br><br>${error.message}
-        </div>`;
-    }
+                                return `
+                                    <div class="match-card" onclick="analizarPartido(${idPartido}, '${local}', '${visita}')">
+                                        <div class="match-header">
+                                            <span class="league-badge">La Liga (Real)</span>
+                                            <span class="match-time">⏰ ${hora}</span>
+                                        </div>
+                                        <div class="teams-row">
+                                            <div class="team-name">${local}</div>
+                                            <div class="vs-badge">VS</div>
+                                            <div class="team-name right">${visita}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        } else {
+                            listaDiv.innerHTML = "<p style='text-align:center;'>No hay partidos en la fecha de prueba.</p>";
+                        }
+                    } catch(e) {
+                        listaDiv.innerHTML = "<p style='color:red;'>Error al leer los datos.</p>";
+                    }
+                } else {
+                    listaDiv.innerHTML = "<p style='color:red;'>Error de red al conectar con API-Football. (Revisa tu límite de 100 peticiones)</p>";
+                }
+            }
+        };
+        xhr.send();
+    });
 }
 
-async function analizarPartido(local, visita, index) {
-    const caja = document.getElementById(`analisis-${index}`);
-    
-    if(caja.style.display === 'block') {
-        caja.style.display = 'none';
-        return;
-    }
+async function analizarPartido(idPartido, local, visita) {
+    document.getElementById('lista-partidos').innerHTML = `
+        <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver a los partidos</button>
+        <div class="match-card" style="border-top: 5px solid #10b981;">
+            <h3 style="text-align:center; margin-bottom:15px;">${local} vs ${visita}</h3>
+            <div id="caja-analisis" style="background:#f8f9fa; padding:15px; border-radius:12px; text-align:center;">
+                🧠 Obteniendo predicciones reales de la API... ⏳
+            </div>
+        </div>
+    `;
 
-    caja.style.display = 'block';
-    caja.innerHTML = "<p>🧠 Analizando tácticas...</p>";
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const url = `${API_HOST}/predictions?fixture=${idPartido}`;
+        
+        xhr.open("GET", url, true);
+        xhr.setRequestHeader("x-apisports-key", API_KEY);
 
-    const prompt = `Actúa como analista de "SuperFooty". Analiza el partido ${local} vs ${visita} en 3 frases. Di quién ganará.`;
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                const caja = document.getElementById('caja-analisis');
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.response && data.response.length > 0) {
+                            const pred = data.response[0].predictions;
+                            const winner = pred.winner.name || "Empate / Incierto";
+                            const advice = pred.advice || "Sin consejo directo.";
+                            const percent = pred.percent;
 
-    try {
-        const respuesta = await consultarGemini(prompt);
-        caja.innerHTML = `<h4>🤖 Análisis de SuperFooty IA</h4><p>${respuesta}</p>`;
-    } catch (error) {
-        caja.innerHTML = `<p style='color:red; font-size:12px;'>${error.message}</p>`;
-    }
-        }
+                            caja.innerHTML = `
+                                <h4 style="color:#166534; margin-bottom:10px;">🤖 Predicción Real de API-Football</h4>
+                                <p style="font-size:14px; margin-bottom:10px;"><strong>Ganador probable:</strong> ${winner}</p>
+                                <p style="font-size:13px; color:#333; margin-bottom:15px;">${advice}</p>
+                                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#166534;">
+                                    <span>Local: ${percent.home}</span>
+                                    <span>Empate: ${percent.draw}</span>
+                                    <span>Visita: ${percent.away}</span>
+                                </div>
+                            `;
+                        } else {
+                            caja.innerHTML = "<p>La API no tiene predicciones para este partido.</p>";
+                        }
+                    } catch(e) {
+                        caja.innerHTML = "<p>Error al leer la predicción.</p>";
+                    }
+                } else {
+                    caja.innerHTML = "<p style='color:red;'>Error de red al pedir la predicción.</p>";
+                }
+            }
+        };
+        xhr.send();
+    });
+                                                   }
