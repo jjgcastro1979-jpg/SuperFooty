@@ -1,21 +1,19 @@
 // ==========================================
 // API-FOOTBALL (Datos y Predicciones Reales)
 // ==========================================
-// Usamos tu clave de API-Football que ya teníamos
-const API_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; 
+const API_KEY = '540249b0c3834611bbc4a5a69a7f7d06'; // Tu clave de API-Football
 const API_HOST = 'https://v3.football.api-sports.io';
 
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
-    listaDiv.innerHTML = "<div class='loader'>Buscando partidos reales de hoy... ⏳</div>";
+    listaDiv.innerHTML = "<div class='loader'>Buscando partidos reales... ⏳</div>";
 
-    // Para evitar el problema del año 2026, forzamos una fecha de 2024 donde seguro hay partidos
-    const fechaReal = '2024-05-20'; 
     const ligaId = '140'; // 140 = La Liga
 
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        const url = `${API_HOST}/fixtures?league=${ligaId}&season=2023&date=${fechaReal}`;
+        // Pedimos los últimos 10 partidos jugados de la temporada 2023
+        const url = `${API_HOST}/fixtures?league=${ligaId}&season=2023&last=10`;
         
         xhr.open("GET", url, true);
         xhr.setRequestHeader("x-apisports-key", API_KEY);
@@ -30,14 +28,15 @@ async function cargarPartidos() {
                             listaDiv.innerHTML = data.response.map(match => {
                                 const local = match.teams.home.name;
                                 const visita = match.teams.away.name;
-                                const hora = new Date(match.fixture.date).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+                                // Mostramos la fecha real del partido
+                                const fecha = new Date(match.fixture.date).toLocaleDateString('es-ES', {day: '2-digit', month: 'short'});
                                 const idPartido = match.fixture.id;
 
                                 return `
                                     <div class="match-card" onclick="analizarPartido(${idPartido}, '${local}', '${visita}')">
                                         <div class="match-header">
                                             <span class="league-badge">La Liga (Real)</span>
-                                            <span class="match-time">⏰ ${hora}</span>
+                                            <span class="match-time">📅 ${fecha}</span>
                                         </div>
                                         <div class="teams-row">
                                             <div class="team-name">${local}</div>
@@ -48,13 +47,13 @@ async function cargarPartidos() {
                                 `;
                             }).join('');
                         } else {
-                            listaDiv.innerHTML = "<p style='text-align:center;'>No hay partidos en la fecha de prueba.</p>";
+                            listaDiv.innerHTML = "<p style='text-align:center;'>La API no ha devuelto partidos. Puede que hayas agotado las 100 peticiones diarias.</p>";
                         }
                     } catch(e) {
                         listaDiv.innerHTML = "<p style='color:red;'>Error al leer los datos.</p>";
                     }
                 } else {
-                    listaDiv.innerHTML = "<p style='color:red;'>Error de red al conectar con API-Football. (Revisa tu límite de 100 peticiones)</p>";
+                    listaDiv.innerHTML = "<p style='color:red;'>Error de red al conectar con API-Football.</p>";
                 }
             }
         };
@@ -115,4 +114,4 @@ async function analizarPartido(idPartido, local, visita) {
         };
         xhr.send();
     });
-                                                   }
+                       }
