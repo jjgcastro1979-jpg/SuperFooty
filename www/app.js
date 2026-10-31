@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - GOAL API + ESPN (HÍBRIDO REAL)
+// SUPERFOOTY PRO - GOAL API + ESPN (CORREGIDO)
 // ==========================================
 const GOAL_API_KEY = 'gapi_1db22217e01cf4be68deb0e0d61b6702d40de011453cdd853792e56f4e3fb714'; // ⚠️ PON TU CLAVE DE GOAL API AQUÍ
 
@@ -8,7 +8,6 @@ const ligasESPN = {
     "ger.1": "Bundesliga", "fra.1": "Ligue 1", "uefa.champions": "Champions League"
 };
 
-// Función para conectar usando el Puente Nativo de Android (Evita bloqueos CORS)
 async function hacerPeticion(url, headers = {}) {
     if (window.cordova && cordova.plugin && cordova.plugin.http) {
         return new Promise((resolve, reject) => {
@@ -85,20 +84,29 @@ async function cargarPartidos() {
     }
 }
 
-// Forma reciente desde ESPN
+// FORMA RECIENTE CORREGIDA (Evita los NaN y las 5 Derrotas)
 async function obtenerFormaEquipo(teamId, ligaId) {
     try {
         const res = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/teams/${teamId}/schedule`);
         if (res.events) {
-            const jugados = res.events.filter(e => e.competitions[0].status.type.completed).slice(-5);
+            // Filtramos solo partidos terminados (con scores válidos)
+            const terminados = res.events.filter(e => {
+                const comp = e.competitions[0];
+                return comp.status && comp.status.type && comp.status.type.completed;
+            });
+            
+            // Cogemos los últimos 5 jugados
+            const ultimos5 = terminados.slice(-5);
+            
             let forma = [];
             let gfTotal = 0, gcTotal = 0;
 
-            jugados.forEach(partido => {
+            ultimos5.forEach(partido => {
                 const comps = partido.competitions[0].competitors;
                 const esLocal = comps.find(c => c.homeAway === 'home').id === teamId;
-                const gl = parseInt(comps.find(c => c.homeAway === 'home').score);
-                const gv = parseInt(comps.find(c => c.homeAway === 'away').score);
+                // Si el score viene vacío, lo tratamos como 0 para evitar NaN
+                const gl = parseInt(comps.find(c => c.homeAway === 'home').score) || 0;
+                const gv = parseInt(comps.find(c => c.homeAway === 'away').score) || 0;
                 
                 let gf = esLocal ? gl : gv;
                 let gc = esLocal ? gv : gl;
@@ -110,10 +118,13 @@ async function obtenerFormaEquipo(teamId, ligaId) {
                 else forma.push('<span style="color:#ef4444; font-weight:bold;">D</span>');
             });
 
+            // Si no hay datos, mostramos "Sin datos" en vez de NaN
+            if (ultimos5.length === 0) return { formaStr: "Sin datos", mediaFavor: 0, mediaContra: 0 };
+
             return {
-                formaStr: forma.join(' - ') || "Sin datos",
-                mediaFavor: jugados.length ? (gfTotal / jugados.length).toFixed(1) : 0,
-                mediaContra: jugados.length ? (gcTotal / jugados.length).toFixed(1) : 0
+                formaStr: forma.join(' - '),
+                mediaFavor: (gfTotal / ultimos5.length).toFixed(1),
+                mediaContra: (gcTotal / ultimos5.length).toFixed(1)
             };
         }
     } catch (e) { console.log("Error forma:", teamId); }
@@ -123,9 +134,8 @@ async function obtenerFormaEquipo(teamId, ligaId) {
 async function analizarPartido(eventId, ligaId, idEspnLocal, idEspnVisita, local, visita, logoLocal, logoVisita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
     const fechaStr = new Date(fechaISO).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-    listaDiv.innerHTML = `<div class='loader'>🧠 Conectando con Goal API y ESPN... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>🧠 Analizando con Goal API y ESPN... ⏳</div>`;
 
-    // 1. ESPN: Forma y Predictor (Siempre reales)
     const formaLocal = await obtenerFormaEquipo(idEspnLocal, ligaId);
     const formaVisita = await obtenerFormaEquipo(idEspnVisita, ligaId);
 
@@ -133,6 +143,7 @@ async function analizarPartido(eventId, ligaId, idEspnLocal, idEspnVisita, local
     let colorPick = "#f59e0b";
     let pL = 33, pV = 33, pE = 34;
 
+    // 1. Predictor de ESPN
     try {
         const summary = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/summary?event=${eventId}`);
         if (summary.predictor && summary.predictor.homeTeam) {
@@ -142,16 +153,14 @@ async function analizarPartido(eventId, ligaId, idEspnLocal, idEspnVisita, local
             
             if (pL > pV + 10) { pickRecomendado = `Gana ${local} (${pL}%)`; colorPick = "#10b981"; }
             else if (pV > pL + 10) { pickRecomendado = `Gana ${visita} (${pV}%)`; colorPick = "#ef4444"; }
-            else { pickRecomendado = `Empate Técnico`; colorPick = "#f59e0b"; }
         }
-    } catch (e) { console.log("Predictor ESPN no disponible."); }
+    } catch (e) { console.log("Predictor no disponible."); }
 
-    // 2. GOAL API: Historial H2H (Usando el Puente Nativo y tu clave)
+    // 2. Historial Goal API (Con validación para no mostrar 0-0-0 como Real)
     let h2hLocal = 0, h2hEmpate = 0, h2hVisita = 0;
     let origenH2H = "No disponible";
 
     try {
-        // Buscamos los IDs de los equipos en Goal API
         const resHome = await hacerPeticion(`https://api.goal-api.com/v1/teams?search=${encodeURIComponent(local)}`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
         const resAway = await hacerPeticion(`https://api.goal-api.com/v1/teams?search=${encodeURIComponent(visita)}`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
 
@@ -161,40 +170,45 @@ async function analizarPartido(eventId, ligaId, idEspnLocal, idEspnVisita, local
         if (idGoalLocal && idGoalVisita) {
             const h2hData = await hacerPeticion(`https://api.goal-api.com/v1/h2h/${idGoalLocal}/${idGoalVisita}/stats`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
             
-            if (h2hData.success && h2hData.data) {
-                h2hLocal = h2hData.data.team1_wins || 0;
-                h2hEmpate = h2hData.data.draws || 0;
-                h2hVisita = h2hData.data.team2_wins || 0;
-                origenH2H = "Goal API (Real)";
+            // Verificamos que realmente haya datos mayores a 0
+            if (h2hData.success && h2hData.data && (h2hData.data.team1_wins > 0 || h2hData.data.team2_wins > 0 || h2hData.data.draws > 0)) {
+                h2hLocal = h2hData.data.team1_wins;
+                h2hEmpate = h2hData.data.draws;
+                h2hVisita = h2hData.data.team2_wins;
+                origenH2H = "Goal API";
             }
         }
-    } catch (e) {
-        console.log("Goal API falló, usando H2H de respaldo de ESPN.");
-    }
+    } catch (e) { console.log("Goal API falló."); }
 
-    // 3. Respaldo de H2H por si Goal API no tiene el partido (Para partidos futuros)
+    // 3. Respaldo de H2H con ESPN (Si Goal falló o dio 0-0-0)
     if (h2hLocal === 0 && h2hVisita === 0 && h2hEmpate === 0) {
         try {
             const summary = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/summary?event=${eventId}`);
             if (summary.headToHeadGames && summary.headToHeadGames.length > 0) {
                 summary.headToHeadGames.forEach(game => {
                     const comps = game.competitions[0].competitors;
-                    const hs = parseInt(comps.find(c => c.homeAway === 'home').score);
-                    const as = parseInt(comps.find(c => c.homeAway === 'away').score);
+                    const hs = parseInt(comps.find(c => c.homeAway === 'home').score) || 0;
+                    const as = parseInt(comps.find(c => c.homeAway === 'away').score) || 0;
                     const homeName = comps.find(c => c.homeAway === 'home').team.displayName;
 
                     if (hs === as) h2hEmpate++;
                     else if ((homeName === local && hs > as) || (homeName === visita && as > hs)) h2hLocal++;
                     else h2hVisita++;
                 });
-                origenH2H = "ESPN (Respaldo)";
+                
+                if(h2hLocal > 0 || h2hVisita > 0 || h2hEmpate > 0) {
+                    origenH2H = "ESPN (Respaldo)";
+                }
             }
         } catch (e) {}
     }
 
-    // Cálculo de probabilidades de goles
-    const probGolesLocal = Math.min(parseFloat(formaLocal.mediaFavor) * 35 + 30, 95);
-    const probGolesVisita = Math.min(parseFloat(formaVisita.mediaFavor) * 35 + 30, 95);
+    // 4. Cálculo seguro de probabilidades (evita el NaN)
+    let probGolesLocal = 50;
+    let probGolesVisita = 50;
+    
+    if (formaLocal.mediaFavor > 0) probGolesLocal = Math.min(parseFloat(formaLocal.mediaFavor) * 35 + 30, 95);
+    if (formaVisita.mediaFavor > 0) probGolesVisita = Math.min(parseFloat(formaVisita.mediaFavor) * 35 + 30, 95);
 
     let resumenTexto = `
         <strong>${local}:</strong> Forma reciente [${formaLocal.formaStr}]. Marca ${formaLocal.mediaFavor} goles/partido y recibe ${formaLocal.mediaContra}.<br><br>
@@ -261,4 +275,4 @@ async function analizarPartido(eventId, ligaId, idEspnLocal, idEspnVisita, local
             </div>
         </div>
     `;
-                    }
+}
