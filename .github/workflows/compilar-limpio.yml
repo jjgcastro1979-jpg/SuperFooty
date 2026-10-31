@@ -25,16 +25,17 @@ jobs:
         java-version: '17'
 
     - name: Instalar Cordova Globalmente
-      run: npm install -g cordova
+      run: npm install -g cordova@12
 
     - name: Crear Plataforma Android
-      run: cordova platform add android --nobuild
+      run: cordova platform add android@12 --nobuild
 
     - name: Compilar APK de Depuración (Debug)
       run: cordova build android
 
-    - name: Subir APK
+    - name: Subir APK (Buscando en todas las carpetas)
       uses: actions/upload-artifact@v4
       with:
         name: SuperFooty-APK
-        path: platforms/android/app/build/outputs/apk/debug/*.apk
+        path: "platforms/android/app/build/outputs/apk/**/*.apk"
+        if-no-files-found: error
