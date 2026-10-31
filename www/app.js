@@ -1,51 +1,11 @@
-
-const GEMINI_API_KEY = 'AQ.Ab8RN6Kf-CUT_40yAqHaawuRZWhw-CMDsCizTQthJKYmtdW9oQ'; 
-
 async function consultarGemini(prompt) {
-    return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            reject(new Error("Tiempo de espera agotado."));
-        }, 15000);
-
-        // Endpoint estándar con la clave en la URL
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        
-        const bodyData = JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-        });
-
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", apiUrl, true);
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-                clearTimeout(timeout);
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        resolve(data.candidates[0].content.parts[0].text);
-                    } catch(e) {
-                        reject(new Error("Error al leer respuesta."));
-                    }
-                } else {
-                    try {
-                        const errData = JSON.parse(xhr.responseText);
-                        reject(new Error(`Error ${xhr.status}: ${errData[0].error.message}`));
-                    } catch(e) {
-                        reject(new Error(`Error de red: ${xhr.status}`));
-                    }
-                }
-            }
-        };
-
-        xhr.onerror = function () {
-            clearTimeout(timeout);
-            reject(new Error("Error de conexión. Verifica tu internet."));
-        };
-
-        xhr.send(bodyData);
-    });
+    try {
+        // Usamos Puter.js para conectar con Gemini sin claves API
+        const respuesta = await puter.ai.chat(prompt, { model: 'google/gemini-2.5-flash' });
+        return respuesta;
+    } catch (error) {
+        throw new Error("La IA no pudo responder. Revisa tu conexión.");
+    }
 }
 
 async function cargarPartidos() {
@@ -105,4 +65,4 @@ async function analizarPartido(local, visita, index) {
     } catch (error) {
         caja.innerHTML = `<p style='color:red; font-size:12px;'>${error.message}</p>`;
     }
-                    }
+        }
