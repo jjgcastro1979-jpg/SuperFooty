@@ -1,16 +1,35 @@
 // ==========================================
-// THE SPORTS DB (Datos reales sin claves) + Motor de Análisis
+// THE SPORTS DB (Múltiples Ligas) + Proxy
 // ==========================================
+
+// Diccionario para saber qué liga ha elegido el usuario
+const nombreLigas = {
+    "4328": "Premier League",
+    "4335": "La Liga",
+    "4332": "Serie A",
+    "4331": "Bundesliga",
+    "4334": "Ligue 1",
+    "4480": "Champions League"
+};
 
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
-    listaDiv.innerHTML = "<div class='loader'>Buscando los próximos partidos reales... ⏳</div>";
+    const ligaId = document.getElementById('league-select').value;
+    const nombreLiga = nombreLigas[ligaId];
 
-    // Obtenemos los próximos 10 partidos de la Premier League (ID: 4328)
-    const url = 'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4328';
+    listaDiv.innerHTML = `<div class='loader'>Buscando próximos partidos de ${nombreLiga}... ⏳</div>`;
+
+    // 1. URL Real de la liga elegida
+    const urlReal = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${ligaId}`;
+    
+    // 2. El puente (Proxy) para evitar bloqueos
+    const urlProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlReal)}`;
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(urlProxy);
+        
+        if (!response.ok) throw new Error("Fallo en la red");
+        
         const data = await response.json();
 
         if (data.events && data.events.length > 0) {
@@ -21,9 +40,9 @@ async function cargarPartidos() {
                 const hora = match.strTime ? match.strTime.substring(0, 5) : "20:00";
 
                 return `
-                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fecha}')">
+                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fecha}', '${nombreLiga}')">
                         <div class="match-header">
-                            <span class="league-badge">Premier League (Real)</span>
+                            <span class="league-badge">${nombreLiga}</span>
                             <span class="match-time">📅 ${fecha} - ⏰ ${hora}</span>
                         </div>
                         <div class="teams-row">
@@ -35,34 +54,40 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = "<p style='text-align:center;'>No hay partidos próximos en este momento.</p>";
+            listaDiv.innerHTML = `<p style='text-align:center;'>No hay partidos próximos en ${nombreLiga} en este momento.</p>`;
         }
     } catch (error) {
-        listaDiv.innerHTML = "<p style='color:red; text-align:center;'>Error al conectar con la base de datos real.</p>";
+        listaDiv.innerHTML = `<p style='color:red; text-align:center;'>Error al conectar con la base de datos real. Revisa tu conexión.</p>`;
     }
 }
 
-function analizarPartido(local, visita, fecha) {
-    // Generamos un análisis basado en reglas lógicas (No aleatorio)
+function analizarPartido(local, visita, fecha, liga) {
+    // Generamos un análisis basado en reglas
     const golesLocal = Math.floor(Math.random() * 2) + 1; 
     const golesVisita = Math.floor(Math.random() * 2);
     const posesion = Math.floor(Math.random() * (65 - 45)) + 45;
     
-    // El motor de texto crea una narrativa basada en los equipos
     let textoAnalisis = "";
-    if (local.includes("City") || local.includes("Arsenal") || local.includes("Liverpool")) {
-        textoAnalisis = `El ${local} llega como claro favorito. Su estilo de juego ofensivo y la presión alta en el medio campo deberían dominar la posesión. El ${visita} intentará cerrar espacios y buscar la contra, pero la calidad individual del equipo local debería inclinarse la balanza.`;
-    } else if (visita.includes("City") || visita.includes("Arsenal") || visita.includes("Liverpool")) {
-        textoAnalisis = `El ${visita} es un rival temible que suele imponer su ritmo fuera de casa. El ${local} necesitará ser muy sólido defensivamente para frenar sus ataques por las bandas. Esperamos un partido muy táctico donde el equipo visitante tendrá más ocasiones claras.`;
+    const equiposTop = ["City", "Arsenal", "Liverpool", "Madrid", "Barcelona", "Atlético", "Inter", "Milan", "Bayern", "Dortmund", "PSG", "Marsella"];
+
+    const esLocalTop = equiposTop.some(eq => local.includes(eq));
+    const esVisitaTop = equiposTop.some(eq => visita.includes(eq));
+
+    if (esLocalTop && !esVisitaTop) {
+        textoAnalisis = `El ${local} llega como claro favorito en este choque de ${liga}. Su estilo de juego ofensivo y la presión alta deberían dominar la posesión del balón. El ${visita} intentará cerrar espacios y buscar la contra, pero la calidad individual del equipo local debería inclinar la balanza hacia la victoria local.`;
+    } else if (esVisitaTop && !esLocalTop) {
+        textoAnalisis = `El ${visita} es un rival temible que suele imponer su ritmo fuera de casa. El ${local} necesitará ser muy sólido defensivamente para frenar sus ataques. Esperamos un partido muy táctico donde el equipo visitante tendrá más ocasiones claras de gol.`;
+    } else if (esLocalTop && esVisitaTop) {
+         textoAnalisis = `¡Partidazo de la jornada en ${liga}! Dos gigantes se enfrentan. El ${local} querrá hacer valer su condición de local, pero el ${visita} tiene calidad suficiente para llevarse los tres puntos. Se esperan emociones fuertes, goles y un partido muy disputado en el mediocampo.`;
     } else {
-        textoAnalisis = `Partido muy igualado en la zona media de la tabla. Ambos equipos conocen bien sus limitaciones y buscarán no cometer errores. El ${local} intentará hacerse fuerte en casa, mientras que el ${visita} apostará por un juego directo. Un empate o un resultado por la mínima es lo más probable.`;
+        textoAnalisis = `Partido muy igualado en ${liga}. Ambos equipos conocen bien sus limitaciones y buscarán no cometer errores defensivos. El ${local} intentará hacerse fuerte en casa, mientras que el ${visita} apostará por un juego directo. Un empate o un resultado por la mínima es lo más probable.`;
     }
 
     document.getElementById('lista-partidos').innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver a los partidos</button>
         <div class="match-card" style="border-top: 5px solid #10b981;">
             <h3 style="text-align:center; margin-bottom:5px;">${local} vs ${visita}</h3>
-            <p style="text-align:center; color:#64748b; font-size:12px; margin-bottom:15px;">Fecha: ${fecha}</p>
+            <p style="text-align:center; color:#64748b; font-size:12px; margin-bottom:15px;">${liga} | Fecha: ${fecha}</p>
             
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:15px; border-radius:12px;">
                 <h4 style="color:#166534; margin-bottom:8px;">🤖 Análisis Táctico SuperFooty</h4>
