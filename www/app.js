@@ -4,7 +4,7 @@
 const GEMINI_API_KEY = 'AQ.Ab8RN6LCG9Bz-WqoaUL0RIAQEcJ56ieeD-CSg0RSuGI-r_KS0g'; // ⚠️ PON TU CLAVE AQUÍ
 
 // ==========================================
-// CONEXIÓN NATIVA (EL PUENTE DEFINITIVO)
+// CONEXIÓN NATIVA CON TEMPORIZADOR DE SEGURIDAD
 // ==========================================
 async function consultarGemini(prompt) {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -13,24 +13,55 @@ async function consultarGemini(prompt) {
         generationConfig: { temperature: 0.7 }
     };
 
-    // Intentamos usar el plugin nativo (Cordova)
-    if (window.cordova && cordova.plugin && cordova.plugin.http) {
-        return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
+        // Temporizador: Si en 12 segundos no hay respuesta, lanzamos error
+        const timeout = setTimeout(() => {
+            reject(new Error("Tiempo de espera agotado. Google no responde. Revisa tu conexión a internet o la clave API."));
+        }, 12000);
+
+        if (window.cordova && cordova.plugin && cordova.plugin.http) {
+            // Usamos el plugin nativo (APK)
             cordova.plugin.http.post(apiUrl, bodyData, { 'Content-Type': 'application/json' }, (response) => {
+                clearTimeout(timeout);
                 try {
                     const data = JSON.parse(response.data);
-                    resolve(data.candidates[0].content.parts[0].text);
+                    if(data.candidates && data.candidates.length > 0) {
+                        resolve(data.candidates[0].content.parts[0].text);
+                    } else {
+                        reject(new Error("Google respondió pero sin partidos. Inténtalo otra vez."));
+                    }
                 } catch(e) {
-                    reject(new Error("Error procesando la respuesta de Google"));
+                    reject(new Error("Error al leer la respuesta de Google."));
                 }
             }, (error) => {
-                reject(new Error(`Error nativo: ${error.status}`));
+                clearTimeout(timeout);
+                reject(new Error(`Error de red nativo: Código ${error.status || 'Desconocido'}. ¿Tienes internet?`));
             });
-        });
-    } else {
-        // Si no está el plugin, es que estamos en el navegador
-        throw new Error("El puente nativo no está listo. Si estás en la APK, reinstálala.");
-    }
+        } else {
+            // Si estamos en el navegador web
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyData)
+            })
+            .then(res => {
+                clearTimeout(timeout);
+                if(!res.ok) throw new Error(`Error web: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if(data.candidates && data.candidates.length > 0) {
+                    resolve(data.candidates[0].content.parts[0].text);
+                } else {
+                    reject(new Error("La IA no devolvió resultados."));
+                }
+            })
+            .catch(err => {
+                clearTimeout(timeout);
+                reject(new Error(`Fallo web: ${err.message}`));
+            });
+        }
+    });
 }
 
 // ==========================================
@@ -68,7 +99,7 @@ async function cargarPartidos() {
         `).join('');
 
     } catch (error) {
-        listaDiv.innerHTML = `<div style='color:red; text-align:center; padding:20px; background:#ffeeee; border-radius:10px; border:1px solid red; font-size:12px;'>
+        listaDiv.innerHTML = `<div style='color:red; text-align:center; padding:20px; background:#ffeeee; border-radius:10px; border:1px solid red; font-size:13px;'>
             <strong>⚠️ Error:</strong><br><br>${error.message}
         </div>`;
     }
@@ -98,4 +129,4 @@ async function analizarPartido(local, visita, index) {
     } catch (error) {
         caja.innerHTML = `<p style='color:red; font-size:12px;'>${error.message}</p>`;
     }
-                           }
+}
