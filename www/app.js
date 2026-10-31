@@ -1,13 +1,14 @@
 // ==========================================
-// SUPERFOOTY PRO - DOBLE RESPALDO (GOAL API + ESPN)
+// SUPERFOOTY PRO - GOAL API + ESPN (HÍBRIDO REAL)
 // ==========================================
-const GOAL_API_KEY = 'gapi_1db22217e01cf4be68deb0e0d61b6702d40de011453cdd853792e56f4e3fb714'; // ⚠️ PON TU CLAVE AQUÍ
+const GOAL_API_KEY = 'gapi_1db22217e01cf4be68deb0e0d61b6702d40de011453cdd853792e56f4e3fb714'; // ⚠️ PON TU CLAVE DE GOAL API AQUÍ
 
 const ligasESPN = {
     "eng.1": "Premier League", "esp.1": "La Liga", "ita.1": "Serie A",
     "ger.1": "Bundesliga", "fra.1": "Ligue 1", "uefa.champions": "Champions League"
 };
 
+// Función para conectar usando el Puente Nativo de Android (Evita bloqueos CORS)
 async function hacerPeticion(url, headers = {}) {
     if (window.cordova && cordova.plugin && cordova.plugin.http) {
         return new Promise((resolve, reject) => {
@@ -48,18 +49,12 @@ async function cargarPartidos() {
     const ligaId = document.getElementById('league-select').value;
     const fechaInput = document.getElementById('date-select').value;
     
-    if (!fechaInput) {
-        alert("Por favor, selecciona una fecha.");
-        return;
-    }
+    if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
 
-    // Convertir fecha a formato ESPN (YYYYMMDD)
     const fechaFormateada = fechaInput.replace(/-/g, '');
-    
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos para el ${fechaInput}... ⏳</div>`;
 
     try {
-        // Añadimos ?dates=YYYYMMDD a la URL para buscar en el futuro
         const data = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/scoreboard?dates=${fechaFormateada}`);
 
         if (data.events && data.events.length > 0) {
@@ -69,7 +64,7 @@ async function cargarPartidos() {
                 const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
                 return `
-                    <div class="match-card" onclick="analizarPartido('${match.id}', '${ligaId}', '${home.displayName}', '${away.displayName}', '${home.logo}', '${away.logo}', '${match.date}')">
+                    <div class="match-card" onclick="analizarPartido('${match.id}', '${ligaId}', '${home.id}', '${away.id}', '${home.displayName}', '${away.displayName}', '${home.logo}', '${away.logo}', '${match.date}')">
                         <div class="match-header">
                             <span class="league-badge">${ligasESPN[ligaId]}</span>
                             <span class="match-time">⏰ ${hora}</span>
@@ -83,90 +78,130 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center;'>No hay partidos de ${ligasESPN[ligaId]} programados para esta fecha.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center;'>No hay partidos programados para esta fecha.</p>`;
         }
     } catch (error) {
         listaDiv.innerHTML = `<p style='color:red; text-align:center;'>Error de conexión.</p>`;
     }
 }
 
-async function analizarPartido(eventId, ligaId, local, visita, logoLocal, logoVisita, fechaISO) {
+// Forma reciente desde ESPN
+async function obtenerFormaEquipo(teamId, ligaId) {
+    try {
+        const res = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/teams/${teamId}/schedule`);
+        if (res.events) {
+            const jugados = res.events.filter(e => e.competitions[0].status.type.completed).slice(-5);
+            let forma = [];
+            let gfTotal = 0, gcTotal = 0;
+
+            jugados.forEach(partido => {
+                const comps = partido.competitions[0].competitors;
+                const esLocal = comps.find(c => c.homeAway === 'home').id === teamId;
+                const gl = parseInt(comps.find(c => c.homeAway === 'home').score);
+                const gv = parseInt(comps.find(c => c.homeAway === 'away').score);
+                
+                let gf = esLocal ? gl : gv;
+                let gc = esLocal ? gv : gl;
+
+                gfTotal += gf; gcTotal += gc;
+
+                if (gf > gc) forma.push('<span style="color:#10b981; font-weight:bold;">V</span>');
+                else if (gf === gc) forma.push('<span style="color:#f59e0b; font-weight:bold;">E</span>');
+                else forma.push('<span style="color:#ef4444; font-weight:bold;">D</span>');
+            });
+
+            return {
+                formaStr: forma.join(' - ') || "Sin datos",
+                mediaFavor: jugados.length ? (gfTotal / jugados.length).toFixed(1) : 0,
+                mediaContra: jugados.length ? (gcTotal / jugados.length).toFixed(1) : 0
+            };
+        }
+    } catch (e) { console.log("Error forma:", teamId); }
+    return { formaStr: "Sin datos", mediaFavor: 0, mediaContra: 0 };
+}
+
+async function analizarPartido(eventId, ligaId, idEspnLocal, idEspnVisita, local, visita, logoLocal, logoVisita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
     const fechaStr = new Date(fechaISO).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-    listaDiv.innerHTML = `<div class='loader'>🧠 Analizando datos reales... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>🧠 Conectando con Goal API y ESPN... ⏳</div>`;
 
-    let h2hLocal = 0, h2hEmpate = 0, h2hVisita = 0;
-    let pickRecomendado = "Calculando...";
+    // 1. ESPN: Forma y Predictor (Siempre reales)
+    const formaLocal = await obtenerFormaEquipo(idEspnLocal, ligaId);
+    const formaVisita = await obtenerFormaEquipo(idEspnVisita, ligaId);
+
+    let pickRecomendado = "Partido Igualado";
     let colorPick = "#f59e0b";
-    let resumenTexto = "";
+    let pL = 33, pV = 33, pE = 34;
 
-    // 1. INTENTO CON GOAL API
     try {
+        const summary = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/summary?event=${eventId}`);
+        if (summary.predictor && summary.predictor.homeTeam) {
+            pL = Math.round(summary.predictor.homeTeam.gameProjection);
+            pV = Math.round(summary.predictor.awayTeam.gameProjection);
+            pE = 100 - pL - pV;
+            
+            if (pL > pV + 10) { pickRecomendado = `Gana ${local} (${pL}%)`; colorPick = "#10b981"; }
+            else if (pV > pL + 10) { pickRecomendado = `Gana ${visita} (${pV}%)`; colorPick = "#ef4444"; }
+            else { pickRecomendado = `Empate Técnico`; colorPick = "#f59e0b"; }
+        }
+    } catch (e) { console.log("Predictor ESPN no disponible."); }
+
+    // 2. GOAL API: Historial H2H (Usando el Puente Nativo y tu clave)
+    let h2hLocal = 0, h2hEmpate = 0, h2hVisita = 0;
+    let origenH2H = "No disponible";
+
+    try {
+        // Buscamos los IDs de los equipos en Goal API
         const resHome = await hacerPeticion(`https://api.goal-api.com/v1/teams?search=${encodeURIComponent(local)}`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
         const resAway = await hacerPeticion(`https://api.goal-api.com/v1/teams?search=${encodeURIComponent(visita)}`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
 
-        const idLocal = resHome.data?.[0]?.id;
-        const idVisita = resAway.data?.[0]?.id;
+        const idGoalLocal = resHome.data?.[0]?.id;
+        const idGoalVisita = resAway.data?.[0]?.id;
 
-        if (idLocal && idVisita) {
-            const h2hData = await hacerPeticion(`https://api.goal-api.com/v1/h2h/${idLocal}/${idVisita}/stats`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
+        if (idGoalLocal && idGoalVisita) {
+            const h2hData = await hacerPeticion(`https://api.goal-api.com/v1/h2h/${idGoalLocal}/${idGoalVisita}/stats`, { 'Authorization': `Bearer ${GOAL_API_KEY}` });
             
-            if (h2hData.success && h2hData.data && (h2hData.data.team1_wins > 0 || h2hData.data.team2_wins > 0 || h2hData.data.draws > 0)) {
-                const stats = h2hData.data;
-                h2hLocal = stats.team1_wins;
-                h2hEmpate = stats.draws;
-                h2hVisita = stats.team2_wins;
-                resumenTexto = `Datos de Goal API: ${local} suma ${h2hLocal} victorias, ${h2hEmpate} empates y ${h2hVisita} victorias para ${visita}.`;
+            if (h2hData.success && h2hData.data) {
+                h2hLocal = h2hData.data.team1_wins || 0;
+                h2hEmpate = h2hData.data.draws || 0;
+                h2hVisita = h2hData.data.team2_wins || 0;
+                origenH2H = "Goal API (Real)";
             }
         }
     } catch (e) {
-        console.log("Goal API sin datos, usando ESPN.");
+        console.log("Goal API falló, usando H2H de respaldo de ESPN.");
     }
 
-    // 2. RESPALDO: USAMOS ESPN
+    // 3. Respaldo de H2H por si Goal API no tiene el partido (Para partidos futuros)
     if (h2hLocal === 0 && h2hVisita === 0 && h2hEmpate === 0) {
         try {
-            const espnRes = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/summary?event=${eventId}`);
-            
-            if (espnRes.headToHeadGames && espnRes.headToHeadGames.length > 0) {
-                espnRes.headToHeadGames.forEach(game => {
+            const summary = await hacerPeticion(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaId}/summary?event=${eventId}`);
+            if (summary.headToHeadGames && summary.headToHeadGames.length > 0) {
+                summary.headToHeadGames.forEach(game => {
                     const comps = game.competitions[0].competitors;
-                    const homeScore = parseInt(comps.find(c => c.homeAway === 'home').score);
-                    const awayScore = parseInt(comps.find(c => c.homeAway === 'away').score);
+                    const hs = parseInt(comps.find(c => c.homeAway === 'home').score);
+                    const as = parseInt(comps.find(c => c.homeAway === 'away').score);
                     const homeName = comps.find(c => c.homeAway === 'home').team.displayName;
 
-                    if (homeScore === awayScore) h2hEmpate++;
-                    else if ((homeName === local && homeScore > awayScore) || (homeName === visita && awayScore > homeScore)) h2hLocal++;
+                    if (hs === as) h2hEmpate++;
+                    else if ((homeName === local && hs > as) || (homeName === visita && as > hs)) h2hLocal++;
                     else h2hVisita++;
                 });
-                resumenTexto = `Historial (ESPN): ${h2hLocal} victorias para ${local}, ${h2hEmpate} empates y ${h2hVisita} victorias para ${visita}.`;
+                origenH2H = "ESPN (Respaldo)";
             }
-
-            if (espnRes.predictor && espnRes.predictor.homeTeam) {
-                const pL = Math.round(espnRes.predictor.homeTeam.gameProjection);
-                const pV = Math.round(espnRes.predictor.awayTeam.gameProjection);
-                pickRecomendado = pL > pV ? `Gana ${local} (${pL}%)` : `Gana ${visita} (${pV}%)`;
-                colorPick = pL > pV ? "#10b981" : "#ef4444";
-                resumenTexto += ` El Predictor de ESPN da un ${pL}% de victoria local y ${pV}% visitante.`;
-            } else {
-                if (h2hLocal > h2hVisita) { pickRecomendado = `Favorito: ${local}`; colorPick = "#10b981"; }
-                else if (h2hVisita > h2hLocal) { pickRecomendado = `Favorito: ${visita}`; colorPick = "#ef4444"; }
-                else { pickRecomendado = `Empate Técnico`; colorPick = "#f59e0b"; }
-            }
-        } catch (e) {
-            resumenTexto = "No se pudieron cargar datos históricos. Mostrando análisis estimado.";
-            pickRecomendado = "Partido Igualado";
-        }
+        } catch (e) {}
     }
 
-    if (!resumenTexto) {
-        resumenTexto = `Partido de ${ligasESPN[ligaId]}. No hay historial reciente registrado entre ambos equipos.`;
-        pickRecomendado = "Partido Igualado";
-    }
+    // Cálculo de probabilidades de goles
+    const probGolesLocal = Math.min(parseFloat(formaLocal.mediaFavor) * 35 + 30, 95);
+    const probGolesVisita = Math.min(parseFloat(formaVisita.mediaFavor) * 35 + 30, 95);
 
-    let probGolesLocal = Math.min((h2hLocal * 10) + 40, 90);
-    let probGolesVisita = Math.min((h2hVisita * 10) + 30, 90);
+    let resumenTexto = `
+        <strong>${local}:</strong> Forma reciente [${formaLocal.formaStr}]. Marca ${formaLocal.mediaFavor} goles/partido y recibe ${formaLocal.mediaContra}.<br><br>
+        <strong>${visita}:</strong> Forma reciente [${formaVisita.formaStr}]. Marca ${formaVisita.mediaFavor} goles/partido y recibe ${formaVisita.mediaContra}.
+    `;
 
+    // --- DISEÑO DEL PANEL ---
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
         <div class="match-card" style="padding: 20px 15px;">
@@ -178,34 +213,52 @@ async function analizarPartido(eventId, ligaId, local, visita, logoLocal, logoVi
             <p style="text-align:center; color:#64748b; font-size:12px; margin-bottom:20px; text-transform: capitalize;">📅 ${fechaStr}</p>
             
             <div style="background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                <p style="color: #94a3b8; font-size: 12px; font-weight: bold; margin-bottom: 5px;">🤖 PICK IA</p>
+                <p style="color: #94a3b8; font-size: 12px; font-weight: bold; margin-bottom: 5px;">🤖 PREDICCIÓN (ESPN ALGORITHM)</p>
                 <p style="color: ${colorPick}; font-size: 18px; font-weight: 900;">${pickRecomendado}</p>
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 14px;">⚔️ Historial (H2H)</h4>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 14px;">📊 Probabilidades</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                ${crearBarraProbabilidad(`Victoria ${local}`, pL)}
+                ${crearBarraProbabilidad(`Empate`, pE)}
+                ${crearBarraProbabilidad(`Victoria ${visita}`, pV)}
+            </div>
+
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 14px;">⚔️ Historial (H2H) - <span style="font-size:11px; font-weight:normal; color:#64748b;">${origenH2H}</span></h4>
             <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 8px; text-align: center; font-size: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
                 <div><strong style="color: #166534; font-size: 16px;">${h2hLocal}</strong><br>${local}</div>
                 <div><strong style="color: #64748b; font-size: 16px;">${h2hEmpate}</strong><br>Empates</div>
                 <div><strong style="color: #b91c1c; font-size: 16px;">${h2hVisita}</strong><br>${visita}</div>
             </div>
 
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:15px; border-radius:12px; margin-bottom: 20px;">
-                <p style="color:#14532d; font-size:13px; line-height:1.5; margin: 0;">${resumenTexto}</p>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 14px;">🔥 Forma Reciente (Últimos 5)</h4>
+            <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 8px; text-align: center; font-size: 14px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                <div style="width: 45%;">
+                    <p style="font-size: 12px; font-weight: bold; color: var(--primary); margin-bottom: 5px;">${local}</p>
+                    <p>${formaLocal.formaStr}</p>
+                </div>
+                <div style="width: 10%; border-left: 1px solid #cbd5e1;"></div>
+                <div style="width: 45%;">
+                    <p style="font-size: 12px; font-weight: bold; color: #ef4444; margin-bottom: 5px;">${visita}</p>
+                    <p>${formaVisita.formaStr}</p>
+                </div>
             </div>
 
-            <h4 style="margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 14px;">⚽ Probabilidad de Goles</h4>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:15px; border-radius:12px; margin-bottom: 20px;">
+                <p style="color:#14532d; font-size:13px; line-height:1.6; margin: 0;">${resumenTexto}</p>
+            </div>
+
+            <h4 style="margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 14px;">⚽ Potencial Ofensivo (Real)</h4>
             <div style="display: flex; gap: 15px;">
                 <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">
                     <p style="text-align: center; font-weight: bold; color: var(--primary); margin-bottom: 10px;">${local}</p>
-                    ${crearBarraProbabilidad("Más de 0.5", Math.min(probGolesLocal + 20, 95))}
-                    ${crearBarraProbabilidad("Más de 1.5", probGolesLocal)}
+                    ${crearBarraProbabilidad("Prob. de Marcar", probGolesLocal)}
                 </div>
                 <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">
                     <p style="text-align: center; font-weight: bold; color: #ef4444; margin-bottom: 10px;">${visita}</p>
-                    ${crearBarraProbabilidad("Más de 0.5", Math.min(probGolesVisita + 20, 95))}
-                    ${crearBarraProbabilidad("Más de 1.5", probGolesVisita)}
+                    ${crearBarraProbabilidad("Prob. de Marcar", probGolesVisita)}
                 </div>
             </div>
         </div>
     `;
-}
+                    }
