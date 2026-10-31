@@ -11,8 +11,7 @@
     <allow-intent href="https://*/*" />
     
     <preference name="Orientation" value="portrait" />
-    <preference name="MixedContentMode" value="0" />
 
-    <!-- Plugin de red nativo (versión estable 3.3.1) -->
+    <!-- EL PUENTE NATIVO PARA ANDROID -->
     <plugin name="cordova-plugin-advanced-http" spec="3.3.1" />
 </widget>
