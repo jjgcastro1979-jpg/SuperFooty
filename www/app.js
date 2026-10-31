@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = 'AIzaSyB3N_pB7O8K5w4G9x2F1vC6d7M8n9J0kL1';
+const GEMINI_API_KEY = 'AQ.Ab8RN6KOuBi5izAFwPq1S_uQBYrSKTfXFsuHE4SSfGDcTilNwg';
 
 async function consultarGemini(prompt) {
     return new Promise((resolve, reject) => {
