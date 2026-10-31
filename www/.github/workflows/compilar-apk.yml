@@ -1,9 +1,8 @@
-name: Compilar APK Deportiva
+name: Compilar APK Limpia
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -11,36 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Descargar Código del Repositorio
-      uses: actions/checkout@v3
-
-    - name: Configurar Java JDK
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Android SDK Setup
-      uses: android-actions/setup-android@v3
+    - name: Checkout del código
+      uses: actions/checkout@v4
 
     - name: Configurar Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: 16
+        node-version: '18'
 
-    - name: Instalar Cordova
-      run: npm install -g cordova
+    - name: Configurar Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Instalar Cordova Globalmente
+      run: npm install -g cordova@12
 
     - name: Crear Plataforma Android
-      run: |
-        cordova platform add android --nobuild
-        
-    - name: Compilar APK de Depuración (Debug)
-      run: cordova build android --debug
+      run: cordova platform add android@12 --nobuild
 
-    - name: Guardar APK como Archivo Descargable
-      uses: actions/upload-artifact@v3
+    - name: Compilar APK de Depuración (Debug)
+      run: cordova build android
+
+    - name: Subir APK
+      uses: actions/upload-artifact@v4
       with:
-        name: App-Apuestas-Deportivas
-        path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
-        
+        name: SuperFooty-APK
+        path: platforms/android/app/build/outputs/apk/debug/*.apk
