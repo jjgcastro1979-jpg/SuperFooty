@@ -4,7 +4,7 @@
 const GEMINI_API_KEY = 'AQ.Ab8RN6LCG9Bz-WqoaUL0RIAQEcJ56ieeD-CSg0RSuGI-r_KS0g'; // ⚠️ PON TU CLAVE AQUÍ
 
 // ==========================================
-// CONEXIÓN NATIVA DIRECTA A GOOGLE (SIN PUENTES)
+// CONEXIÓN NATIVA (EL PUENTE DEFINITIVO)
 // ==========================================
 async function consultarGemini(prompt) {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -13,7 +13,7 @@ async function consultarGemini(prompt) {
         generationConfig: { temperature: 0.7 }
     };
 
-    // 1. SI ESTAMOS EN LA APK (Usa el motor nativo de Android)
+    // Si el plugin nativo está disponible (en la APK), lo usamos
     if (window.cordova && cordova.plugin && cordova.plugin.http) {
         return new Promise((resolve, reject) => {
             cordova.plugin.http.post(apiUrl, bodyData, { 'Content-Type': 'application/json' }, (response) => {
@@ -29,7 +29,7 @@ async function consultarGemini(prompt) {
         });
     }
 
-    // 2. SI ESTAMOS EN EL NAVEGADOR WEB (Usa fetch normal)
+    // Si estamos en el navegador web, usamos fetch normal
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
