@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - API 2026 (TODAS LAS LIGAS)
+// SUPERFOOTY PRO - ANÁLISIS INDIVIDUAL POR EQUIPO
 // ==========================================
 
 const ligasAPI = {
@@ -19,7 +19,7 @@ function crearBarraProbabilidad(titulo, probabilidad) {
     else if (prob >= 40) color = "#f59e0b";
 
     return `
-        <div style="margin-bottom: 8px;">
+        <div style="margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px;">
                 <span style="color: #475569;">${titulo}</span>
                 <span style="color: ${color};">${Math.round(prob)}%</span>
@@ -38,10 +38,8 @@ async function cargarPartidos() {
     const fechaInput = document.getElementById('date-select').value;
 
     if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
-
-    // CANDADO DE SEGURIDAD: Si la liga no está en la lista, avisamos.
     if (!ligaInfo) {
-        listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#f59e0b; font-weight:bold;'>La liga seleccionada aún no está configurada. Prueba con La Liga o Premier League.</p>`;
+        listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#f59e0b; font-weight:bold;'>La liga seleccionada no está configurada.</p>`;
         return;
     }
 
@@ -79,7 +77,7 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para el ${fechaInput} en ${ligaInfo.nombre}.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para el ${fechaInput}.</p>`;
         }
 
     } catch (error) {
@@ -91,35 +89,115 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
     const fechaStr = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     
-    listaDiv.innerHTML = `<div class='loader'>🧠 Analizando partido... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>🧠 Calculando estadísticas del partido... ⏳</div>`;
 
-    const equiposTop = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus"];
-    const esLocalTop = equiposTop.some(eq => local.includes(eq));
-    const esVisitaTop = equiposTop.some(eq => visita.includes(eq));
+    // --- MOTOR LÓGICO DE ESTADÍSTICAS INDIVIDUALES ---
+    const equiposGrandes = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus"];
+    const esLocalTop = equiposGrandes.some(eq => local.includes(eq));
+    const esVisitaTop = equiposGrandes.some(eq => visita.includes(eq));
 
-    let pL = 40, pV = 30, pE = 30;
-    let pick = `Gana ${local}`;
-    let color = "#10b981";
+    let pL = 33, pV = 33, pE = 34;
+    let pick = "Partido Igualado", color = "#f59e0b";
 
-    if (esVisitaTop && !esLocalTop) { pL = 20; pV = 60; pE = 20; pick = `Gana ${visita}`; color = "#ef4444"; }
-    else if (esLocalTop && esVisitaTop) { pL = 35; pV = 35; pE = 30; pick = "Partido Igualado"; color = "#f59e0b"; }
+    // Datos base para simular probabilidades individuales
+    let golesL = [80, 60, 35], golesV = [75, 50, 25];
+    let cornersL = [75, 55, 35], cornersV = [65, 45, 25];
+    let tarjetasL = [85, 60, 35], tarjetasV = [80, 55, 30];
+
+    if (esLocalTop && !esVisitaTop) {
+        pL = 65; pV = 15; pE = 20; pick = `Gana ${local}`; color = "#10b981";
+        golesL = [90, 75, 55]; golesV = [60, 35, 15];
+        cornersL = [85, 70, 50]; cornersV = [55, 35, 20];
+        tarjetasL = [70, 45, 25]; tarjetasV = [90, 65, 40]; // El visitante suele hacer más faltas
+    } else if (esVisitaTop && !esLocalTop) {
+        pL = 15; pV = 65; pE = 20; pick = `Gana ${visita}`; color = "#ef4444";
+        golesL = [60, 35, 15]; golesV = [90, 75, 55];
+        cornersL = [55, 35, 20]; cornersV = [85, 70, 50];
+        tarjetasL = [90, 65, 40]; tarjetasV = [70, 45, 25];
+    } else if (esLocalTop && esVisitaTop) {
+        pL = 40; pV = 40; pE = 20; pick = "Partido Muy Igualado"; color = "#f59e0b";
+        golesL = [85, 65, 45]; golesV = [85, 65, 45];
+        cornersL = [75, 55, 35]; cornersV = [75, 55, 35];
+        tarjetasL = [80, 55, 30]; tarjetasV = [80, 55, 30];
+    }
 
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
         <div class="match-card" style="padding: 20px 15px;">
-            <h3 style="text-align:center; font-size: 18px; margin-bottom: 5px;">${local} vs ${visita}</h3>
-            <p style="text-align:center; color:#64748b; font-size:12px; margin-bottom:20px;">📅 ${fechaStr}</p>
             
+            <!-- CABECERA -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${local}</h3></div>
+                <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
+                <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
+            </div>
+            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:20px; text-transform: capitalize;">📅 ${fechaStr}</p>
+            
+            <!-- PICK IA -->
             <div style="background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-                <p style="color: #94a3b8; font-size: 12px; font-weight: bold; margin-bottom: 5px;">🤖 PICK IA</p>
-                <p style="color: ${color}; font-size: 18px; font-weight: 900;">${pick}</p>
+                <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">🤖 PICK IA (RESULTADO)</p>
+                <p style="color: ${color}; font-size: 16px; font-weight: 900;">${pick}</p>
             </div>
 
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <!-- 1X2 -->
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📊 Probabilidades 1X2</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
                 ${crearBarraProbabilidad(`Victoria ${local}`, pL)}
                 ${crearBarraProbabilidad(`Empate`, pE)}
                 ${crearBarraProbabilidad(`Victoria ${visita}`, pV)}
             </div>
+
+            <!-- GOLES INDIVIDUALES -->
+            <h4 style="margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles por Equipo</h4>
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 12px; color: var(--primary); margin-bottom: 15px;">${local}</p>
+                    ${crearBarraProbabilidad("+0.5 Goles", golesL[0])}
+                    ${crearBarraProbabilidad("+1.5 Goles", golesL[1])}
+                    ${crearBarraProbabilidad("+2.5 Goles", golesL[2])}
+                </div>
+                <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 12px; color: #ef4444; margin-bottom: 15px;">${visita}</p>
+                    ${crearBarraProbabilidad("+0.5 Goles", golesV[0])}
+                    ${crearBarraProbabilidad("+1.5 Goles", golesV[1])}
+                    ${crearBarraProbabilidad("+2.5 Goles", golesV[2])}
+                </div>
+            </div>
+
+            <!-- CÓRNERS INDIVIDUALES -->
+            <h4 style="margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners por Equipo</h4>
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 12px; color: var(--primary); margin-bottom: 15px;">${local}</p>
+                    ${crearBarraProbabilidad("+3.5 Córners", cornersL[0])}
+                    ${crearBarraProbabilidad("+4.5 Córners", cornersL[1])}
+                    ${crearBarraProbabilidad("+5.5 Córners", cornersL[2])}
+                </div>
+                <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 12px; color: #ef4444; margin-bottom: 15px;">${visita}</p>
+                    ${crearBarraProbabilidad("+3.5 Córners", cornersV[0])}
+                    ${crearBarraProbabilidad("+4.5 Córners", cornersV[1])}
+                    ${crearBarraProbabilidad("+5.5 Córners", cornersV[2])}
+                </div>
+            </div>
+
+            <!-- TARJETAS INDIVIDUALES -->
+            <h4 style="margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🟨 Tarjetas por Equipo</h4>
+            <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 12px; color: var(--primary); margin-bottom: 15px;">${local}</p>
+                    ${crearBarraProbabilidad("+1.5 Tarjetas", tarjetasL[0])}
+                    ${crearBarraProbabilidad("+2.5 Tarjetas", tarjetasL[1])}
+                    ${crearBarraProbabilidad("+3.5 Tarjetas", tarjetasL[2])}
+                </div>
+                <div style="flex: 1; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 12px; color: #ef4444; margin-bottom: 15px;">${visita}</p>
+                    ${crearBarraProbabilidad("+1.5 Tarjetas", tarjetasV[0])}
+                    ${crearBarraProbabilidad("+2.5 Tarjetas", tarjetasV[1])}
+                    ${crearBarraProbabilidad("+3.5 Tarjetas", tarjetasV[2])}
+                </div>
+            </div>
+
         </div>
     `;
 }
