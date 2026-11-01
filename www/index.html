@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MisPronósticos AI</title>
+    <title>Mis Pronósticos AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-
         <!-- CABECERA -->
         <header class="app-header">
             <div class="logo-row">
@@ -18,28 +17,26 @@
             <p class="app-desc">Análisis deportivo en vivo</p>
         </header>
 
-        <!-- NAVEGACIÓN DE FECHA -->
+        <!-- FECHA -->
         <div class="date-nav">
             <button class="date-btn" id="prevDate">←</button>
             <div class="date-center">
                 <div class="date-day" id="currentDay">Hoy</div>
                 <div class="date-full" id="currentDate">Domingo 1 de nov.</div>
             </div>
-            <div class="date-right">
-                <button class="date-btn" id="nextDate">→</button>
-                <button class="date-btn calendar-icon">📅</button>
-            </div>
+            <button class="date-btn calendar-btn" id="calendarBtn">📅</button>
+            <button class="date-btn" id="nextDate">→</button>
         </div>
 
         <!-- BOTONES PRINCIPALES -->
         <div class="top-buttons">
-            <button class="top-btn ia" id="btnTopIA">
-                <strong>⚡ Top IA</strong>
-                <span>Mejores del día</span>
+            <button class="top-btn ia active" id="btnTopIA">
+                <span class="bolt">⚡</span> Top IA
+                <span class="sub">Mejores del día</span>
             </button>
             <button class="top-btn stat" id="btnStats">
-                <strong>📊 Estadístico</strong>
-                <span>Top Calculados</span>
+                <span class="chart">📊</span> Estadístico
+                <span class="sub">Top Calculados</span>
             </button>
         </div>
 
@@ -59,18 +56,31 @@
             </div>
         </div>
 
-        <!-- LISTA DE PARTIDOS -->
-        <div class="matches-list" id="matchesList">
-            <!-- Los partidos se cargan aquí desde app.js -->
-            <div class="empty-state">
-                <p>Selecciona un partido para ver el análisis</p>
+        <!-- SELECCIÓN DE PARTIDOS -->
+        <div class="selection-area">
+            <p class="select-text">Selecciona un partido para ver el análisis</p>
+            <p class="live-text">Pulsa para ver el LIVE</p>
+            
+            <div class="controls-area">
+                <select id="league-select" class="form-select">
+                    <option value="">Selecciona una liga</option>
+                    <option value="eng.1">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+                    <option value="esp.1">🇪🇸 La Liga</option>
+                    <option value="ita.1">🇮🇹 Serie A</option>
+                    <option value="ger.1">🇩🇪 Bundesliga</option>
+                    <option value="fra.1">🇫🇷 Ligue 1</option>
+                    <option value="uefa.champions">🏆 Champions League</option>
+                </select>
+                <input type="date" id="date-select" class="form-control">
+                <button onclick="cargarPartidos()" class="load-btn">🔍 Buscar Partidos</button>
             </div>
         </div>
 
-        <p class="live-prompt">Pulsa para ver el LIVE</p>
+        <!-- LISTA DE PARTIDOS -->
+        <div id="lista-partidos" class="matches-list"></div>
     </div>
 
-    <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+    <!-- BARRA INFERIOR -->
     <nav class="bottom-nav">
         <div class="nav-item active" data-nav="matches">
             <div class="nav-icon">⚽</div>
