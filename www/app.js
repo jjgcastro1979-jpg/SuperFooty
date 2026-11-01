@@ -1,13 +1,10 @@
 // ==========================================
-// SUPERFOOTY PRO - MOTOR CON CACHÉ Y FECHAS REALES
+// SUPERFOOTY PRO - API 2026 SIN CLAVE (worldcup26.ir)
 // ==========================================
 
-const ligasOpenFootball = {
-    "eng.1": { nombre: "Premier League", archivo: "en.1.json" },
-    "esp.1": { nombre: "La Liga", archivo: "es.1.json" },
-    "ita.1": { nombre: "Serie A", archivo: "it.1.json" },
-    "ger.1": { nombre: "Bundesliga", archivo: "de.1.json" },
-    "fra.1": { nombre: "Ligue 1", archivo: "fr.1.json" }
+const ligasAPI = {
+    "eng.1": { nombre: "Premier League", slug: "eng.1" },
+    "esp.1": { nombre: "La Liga", slug: "esp.1" }
 };
 
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -33,70 +30,64 @@ function crearBarraProbabilidad(titulo, probabilidad) {
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     const ligaId = document.getElementById('league-select').value;
-    const ligaInfo = ligasOpenFootball[ligaId];
-    const fechaUsuario = document.getElementById('date-select').value;
+    const ligaInfo = ligasAPI[ligaId];
+    const fechaInput = document.getElementById('date-select').value;
 
-    if (!fechaUsuario) { alert("Por favor, selecciona una fecha."); return; }
+    if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
 
-    // 1. COMPROBAR CACHÉ
-    const datosCache = obtenerDeCache(fechaUsuario, ligaId);
-    if (datosCache) {
-        listaDiv.innerHTML = `<p style="text-align:center; color:#10b981; font-size:12px; margin-bottom:10px;">⚡ Cargado desde memoria (Offline)</p>`;
-        renderizarListaPartidos(datosCache, ligaInfo, fechaUsuario);
-        return;
-    }
-
-    // 2. SI NO HAY CACHÉ, IR A INTERNET
-    const mesDia = fechaUsuario.substring(5); 
-    const fechaBusqueda = `2024${mesDia}`; // Buscamos en la temporada 2024 real
-
-    listaDiv.innerHTML = `<div class='loader'>Buscando partidos en la red... ⏳</div>`;
+    // Convertimos la fecha al formato que espera la API (YYYYMMDD)
+    const fechaFormateada = fechaInput.replace(/-/g, '');
+    listaDiv.innerHTML = `<div class='loader'>Buscando partidos del ${fechaInput}... ⏳</div>`;
 
     try {
-        const url = `https://raw.githubusercontent.com/openfootball/football.json/master/2024-25/${ligaInfo.archivo}`;
+        // URL real de la API que no requiere clave
+        const url = `https://worldcup26.ir/get/soccer/${ligaInfo.slug}/scoreboard?dates=${fechaFormateada}`;
         const response = await fetch(url);
+        
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+
         const data = await response.json();
 
-        const partidosDelDia = data.matches.filter(p => p.date === fechaBusqueda);
+        // La API devuelve los partidos en `data.events` (similar a ESPN)
+        const partidos = data.events || [];
 
-        if (partidosDelDia.length > 0) {
-            // GUARDAR EN CACHÉ
-            guardarEnCache(fechaUsuario, ligaId, partidosDelDia);
-            renderizarListaPartidos(partidosDelDia, ligaInfo, fechaUsuario);
+        if (partidos.length > 0) {
+            listaDiv.innerHTML = partidos.map(match => {
+                const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
+                const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
+                const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                const matchId = match.id;
+
+                return `
+                    <div class="match-card" onclick="analizarPartido('${matchId}', '${ligaId}', '${local}', '${visita}', '${fechaInput}')">
+                        <div class="match-header">
+                            <span class="league-badge">${ligaInfo.nombre}</span>
+                            <span class="match-time">⏰ ${hora}</span>
+                        </div>
+                        <div class="teams-row">
+                            <div class="team-name">${local}</div>
+                            <div class="vs-badge">VS</div>
+                            <div class="team-name right">${visita}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos para el ${fechaUsuario}.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} para el ${fechaInput}.</p>`;
         }
+
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error de conexión.</p>`;
+        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con la API de 2026.<br><br>${error.message}</p>`;
     }
 }
 
-function renderizarListaPartidos(partidos, ligaInfo, fechaUsuario) {
+async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
-    listaDiv.innerHTML = partidos.map(match => {
-        const matchId = btoa(`${match.date}-${match.team1}-${match.team2}`).replace(/=/g, '');
-        return `
-            <div class="match-card" onclick="analizarPartido('${matchId}', '${match.team1}', '${match.team2}', '${fechaUsuario}')">
-                <div class="match-header">
-                    <span class="league-badge">${ligaInfo.nombre}</span>
-                    <span class="match-time">⏰ ${match.time || '20:00'}</span>
-                </div>
-                <div class="teams-row">
-                    <div class="team-name">${match.team1}</div>
-                    <div class="vs-badge">VS</div>
-                    <div class="team-name right">${match.team2}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+    const fechaStr = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    
+    listaDiv.innerHTML = `<div class='loader'>🧠 Analizando partido... ⏳</div>`;
 
-async function analizarPartido(matchId, local, visita, fechaUsuario) {
-    const listaDiv = document.getElementById('lista-partidos');
-    const fechaStr = new Date(fechaUsuario + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    listaDiv.innerHTML = `<div class='loader'>🧠 Analizando...</div>`;
-
-    // Análisis rápido simulado basado en la fuerza
+    // Análisis basado en la fuerza de los equipos
     const equiposTop = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG"];
     const esLocalTop = equiposTop.some(eq => local.includes(eq));
     const esVisitaTop = equiposTop.some(eq => visita.includes(eq));
