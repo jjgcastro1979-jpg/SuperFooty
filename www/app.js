@@ -49,9 +49,6 @@ function crearBarraDuelo(titulo, probLocal, probVisita) {
 }
 
 async function cargarPartidos() {
-    // Añadimos un aviso para saber si el botón funciona
-    console.log("Botón pulsado. Iniciando búsqueda...");
-    
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos... ⏳</div>`;
 
@@ -76,22 +73,35 @@ async function cargarPartidos() {
             listaDiv.innerHTML = partidos.map(match => {
                 const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
                 const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
-                const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 
-                // Obtener resultados si existen
+                // --- LÓGICA CORREGIDA PARA EL ESTADO DEL PARTIDO ---
+                const estado = match.status?.type?.state; // "pre", "in", "post"
+                const descEstado = match.status?.type?.description; // "Scheduled", "In Progress", "Final"
+                
                 const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
                 const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
-                const esFinalizado = scoreHome !== undefined && scoreHome !== null;
+                
+                const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
                 let displayTime = `⏰ ${hora}`;
                 let extraBadge = "";
-                if (esFinalizado) {
+                let esFinalizado = false;
+
+                // Si el estado es "post" o el texto dice "Final" (y no es un partido futuro)
+                if (estado === 'post' || descEstado === 'Final' || descEstado === 'Full Time') {
                     displayTime = `<span style="color: #ef4444; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
                     extraBadge = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>`;
+                    esFinalizado = true;
+                } 
+                // Si está jugando
+                else if (estado === 'in' || descEstado === 'In Progress') {
+                    displayTime = `<span style="color: #10b981; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
                 }
 
+                // Pasamos el estado real a la función
                 return `
-                    <div class="match-card" onclick="analizarPartido('${match.id}', '${local}', '${visita}', '${scoreHome}', '${scoreAway}')">
+                    <div class="match-card" onclick="analizarPartido('${match.id}', '${local}', '${visita}', '${scoreHome}', '${scoreAway}', '${esFinalizado}', '${estado}')">
                         <div class="match-header">
                             <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
                             <span class="match-time">${displayTime}</span>
@@ -112,22 +122,22 @@ async function cargarPartidos() {
     }
 }
 
-function analizarPartido(matchId, local, visita, scoreHome, scoreAway) {
+function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinalizado, estado) {
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = `<div class='loader'>Calculando análisis... ⏳</div>`;
 
-    // Simulación de datos (Idéntico a lo que teníamos)
+    // Simulación de datos
     let pL = 45, pE = 25, pV = 30;
     let pick = `Gana ${local}`, color = "#10b981";
     let bttsYes = 55;
     let over25 = 60;
     
-    const esFinalizado = scoreHome !== 'null' && scoreHome !== 'undefined' && scoreAway !== 'null' && scoreAway !== 'undefined';
     let cajaResultado = "";
 
-    if (esFinalizado) {
-        const gH = parseInt(scoreHome);
-        const gA = parseInt(scoreAway);
+    // Verificamos si de verdad terminó
+    if (esFinalizado === 'true') {
+        const gH = parseInt(scoreHome) || 0;
+        const gA = parseInt(scoreAway) || 0;
         let acierto = false;
         
         if (gH > gA && pick.includes(`Gana ${local}`)) acierto = true;
@@ -135,10 +145,12 @@ function analizarPartido(matchId, local, visita, scoreHome, scoreAway) {
         else if (gH < gA && pick.includes(`Gana ${visita}`)) acierto = true;
 
         cajaResultado = acierto ? 
-            `<div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #065f46; margin:0;">✅ PREDICCIÓN ACERTADA</h3><p style="color: #065f46; margin: 5px 0 0 0;">Resultado: ${gH} - ${gA}</p></div>` :
-            `<div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #991b1b; margin:0;">❌ PREDICCIÓN FALLIDA</h3><p style="color: #991b1b; margin: 5px 0 0 0;">Resultado: ${gH} - ${gA}</p></div>`;
+            `<div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #065f46; margin:0;">✅ PREDICCIÓN ACERTADA</h3><p style="color: #065f46; margin: 5px 0 0 0;">Resultado Final: ${gH} - ${gA}</p></div>` :
+            `<div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #991b1b; margin:0;">❌ PREDICCIÓN FALLIDA</h3><p style="color: #991b1b; margin: 5px 0 0 0;">Resultado Final: ${gH} - ${gA}</p></div>`;
+    } else if (estado === 'in') {
+        cajaResultado = `<div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #92400e; margin:0;">🔴 PARTIDO EN JUEGO</h3><p style="color: #92400e; margin: 5px 0 0 0;">Marcador actual: ${scoreHome} - ${scoreAway}</p></div>`;
     } else {
-        cajaResultado = `<div style="background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #1d4ed8; margin:0;">⏳ PARTIDO PENDIENTE</h3></div>`;
+        cajaResultado = `<div style="background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;"><h3 style="color: #1d4ed8; margin:0;">⏳ PARTIDO PENDIENTE</h3><p style="color: #1d4ed8; margin: 5px 0 0 0;">Aún no se ha jugado.</p></div>`;
     }
 
     listaDiv.innerHTML = `
