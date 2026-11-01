@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - ANÁLISIS PREMIUM CON CUOTAS
+// SUPERFOOTY PRO - ANÁLISIS PREMIUM COMPLETO
 // ==========================================
 
 const ligasAPI = {
@@ -11,12 +11,12 @@ const ligasAPI = {
     "uefa.champions": { nombre: "Champions League", slug: "uefa.champions" }
 };
 
-// Función para calcular la cuota de apuesta (1 / probabilidad)
+// Función para calcular la cuota de apuesta
 function calcularCuota(probabilidad) {
     let prob = parseFloat(probabilidad);
     if (prob <= 0 || isNaN(prob)) return "-";
     let cuota = 100 / prob;
-    return cuota > 10 ? "10.0" : cuota.toFixed(2); // Limitamos a cuota máxima 10.0
+    return cuota > 10 ? "10.0" : cuota.toFixed(2); 
 }
 
 // Función para barras normales
@@ -180,7 +180,6 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     opciones.sort((a, b) => b.valor - a.valor);
     let mejorOpcion = opciones[0];
 
-    // Nivel de confianza
     let nivelConfianza = "MEDIA";
     let colorConfianza = "#f59e0b";
     if (mejorOpcion.valor >= 75) { nivelConfianza = "ALTA"; colorConfianza = "#10b981"; }
@@ -204,15 +203,10 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
             </div>
 
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📊 Probabilidades 1X2 y Cuotas</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
                 ${crearBarraProbabilidad(`Victoria ${local}`, pL, true)}
                 ${crearBarraProbabilidad(`Empate`, pE, true)}
                 ${crearBarraProbabilidad(`Victoria ${visita}`, pV, true)}
-            </div>
-
-            <!-- AMBOS MARCAN (Destacado) -->
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes, true)}
             </div>
 
             <!-- GOLES -->
@@ -275,9 +269,12 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
                 ${crearBarraDuelo("+2.5 Tarjetas", tarjetasL[1], tarjetasV[1])}
             </div>
 
-            <!-- TOTALES GLOBALES -->
+            <!-- TOTALES GLOBALES (Incluye Ambos Marcan) -->
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Totales del Partido</h4>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes, true)}
+                ${crearBarraProbabilidad("Ambos Equipos Marcan (NO)", 100 - bttsYes, true)}
+                <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 10px;"></div>
                 ${crearBarraProbabilidad("Más de 2.5 Goles Totales", over25_global, true)}
                 ${crearBarraProbabilidad("Más de 8.5 Córners Totales", cornersOver85, true)}
                 ${crearBarraProbabilidad("Más de 3.5 Tarjetas Totales", cardsOver35, true)}
@@ -313,4 +310,4 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
             bar.style.width = bar.getAttribute('data-width');
         });
     }, 100);
-                                             }
+                              }
