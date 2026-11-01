@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - MOTOR LÓGICO CORREGIDO
+// SUPERFOOTY PRO - MOTOR LÓGICO CORREGIDO + ESTADOS
 // ==========================================
 
 const ligasAPI = {
@@ -85,11 +85,29 @@ async function cargarPartidos() {
                 const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 const matchId = match.id;
 
+                // --- NUEVO: Lógica para saber si está finalizado o pendiente ---
+                const estado = match.status?.type?.state; // "pre", "in", "post"
+                const descEstado = match.status?.type?.description;
+                const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
+                const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
+
+                let displayTime = `⏰ ${hora}`;
+                let extraBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Pendiente</span>`;
+
+                if (estado === 'post' || descEstado === 'Final' || descEstado === 'Full Time') {
+                    displayTime = `<span style="color: #ef4444; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>`;
+                } else if (estado === 'in') {
+                    displayTime = `<span style="color: #10b981; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
+                }
+
+                // Pasamos el estado al análisis
                 return `
-                    <div class="match-card" onclick="analizarPartido('${matchId}', '${ligaId}', '${local}', '${visita}', '${fechaInput}')">
+                    <div class="match-card" onclick="analizarPartido('${matchId}', '${ligaId}', '${local}', '${visita}', '${fechaInput}', '${estado}', '${scoreHome}', '${scoreAway}')">
                         <div class="match-header">
-                            <span class="league-badge">${ligaInfo.nombre}</span>
-                            <span class="match-time">⏰ ${hora}</span>
+                            <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
+                            <span class="match-time">${displayTime}</span>
                         </div>
                         <div class="teams-row">
                             <div class="team-name">${local}</div>
@@ -113,7 +131,8 @@ function variar(val) {
     return Math.min(Math.max(val + varianza, 5), 98);
 }
 
-async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
+// Añadimos 'estado', 'scoreHome' y 'scoreAway' a los parámetros
+async function analizarPartido(matchId, ligaId, local, visita, fechaISO, estado, scoreHome, scoreAway) {
     const listaDiv = document.getElementById('lista-partidos');
     const fechaStr = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
@@ -133,32 +152,27 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     let pL = 33, pV = 33, pE = 34, pick = "Partido Igualado", color = "#f59e0b";
 
     if (esLocalTop && esVisitaTop) {
-        // Partidazo (Ej: Madrid vs Barca)
         pL = 40; pV = 40; pE = 20; pick = "Partido Muy Igualado"; color = "#f59e0b";
         baseGolesL = [95, 85, 70]; baseGolesV = [90, 75, 60];
         baseCornersL = [85, 65, 40]; baseCornersV = [85, 65, 40];
         baseTarjetasL = [75, 50, 25]; baseTarjetasV = [75, 50, 25];
     } else if (esLocalTop && !esVisitaTop) {
-        // Goliath vs David (Local)
         pL = 75; pV = 10; pE = 15; pick = `Gana ${local}`; color = "#10b981";
         baseGolesL = [95, 85, 75]; baseGolesV = [65, 40, 20];
         baseCornersL = [85, 70, 50]; baseCornersV = [60, 40, 20];
         baseTarjetasL = [70, 45, 25]; baseTarjetasV = [85, 60, 35];
     } else if (esVisitaTop && !esLocalTop) {
-        // David vs Goliath (Visita)
         pL = 10; pV = 75; pE = 15; pick = `Gana ${visita}`; color = "#ef4444";
         baseGolesL = [65, 40, 20]; baseGolesV = [95, 85, 75];
         baseCornersL = [60, 40, 20]; baseCornersV = [85, 70, 50];
         baseTarjetasL = [85, 60, 35]; baseTarjetasV = [70, 45, 25];
     } else if (esLocalDef && esVisitaDef) {
-        // Partido Cerrado
         pL = 35; pV = 30; pE = 35; pick = "Empate o Partido Cerrado"; color = "#f59e0b";
         baseGolesL = [70, 45, 25]; baseGolesV = [65, 40, 20];
         baseCornersL = [70, 45, 25]; baseCornersV = [70, 45, 25];
         baseTarjetasL = [95, 80, 65]; baseTarjetasV = [95, 80, 65];
     }
 
-    // Aplicamos variación
     let golesL = baseGolesL.map(variar);
     let golesV = baseGolesV.map(variar);
     let cornersL = baseCornersL.map(variar);
@@ -166,13 +180,11 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     let tarjetasL = baseTarjetasL.map(variar);
     let tarjetasV = baseTarjetasV.map(variar);
 
-    // Cálculos globales
     let over25_global = Math.min(Math.round(((golesL[2] + golesV[2]) / 2) + 5), 95);
     let bttsYes = Math.min(Math.round(((golesL[1] + golesV[1]) / 2) - 5), 95);
     let cornersOver85 = Math.min(Math.round(((cornersL[1] + cornersV[1]) / 2) + 5), 95);
     let cardsOver35 = Math.min(Math.round(((tarjetasL[1] + tarjetasV[1]) / 2) + 5), 95);
 
-    // --- CÁLCULO DE LA MEJOR OPCIÓN GLOBAL ---
     let opciones = [
         { nombre: `Victoria ${local}`, valor: pL },
         { nombre: `Empate`, valor: pE },
@@ -195,6 +207,22 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     if (mejorOpcion.valor >= 75) { nivelConfianza = "ALTA"; colorConfianza = "#10b981"; }
     else if (mejorOpcion.valor < 55) { nivelConfianza = "BAJA"; colorConfianza = "#ef4444"; }
 
+    // --- NUEVO: CAJA DE ESTADO DEL PARTIDO ---
+    let cajaEstado = "";
+    if (estado === 'post' || estado === 'Final' || estado === 'Full Time') {
+        cajaEstado = `<div style="background: #e2e8f0; color: #333; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #cbd5e1;">
+            🏁 Partido Finalizado: ${local} ${scoreHome} - ${scoreAway} ${visita}
+        </div>`;
+    } else if (estado === 'in') {
+        cajaEstado = `<div style="background: #d1fae5; color: #065f46; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #10b981;">
+            🔴 Partido en Juego: ${scoreHome} - ${scoreAway}
+        </div>`;
+    } else {
+        cajaEstado = `<div style="background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #f59e0b;">
+            ⏳ Partido Pendiente de Jugar
+        </div>`;
+    }
+
     // --- RENDERIZADO HTML ---
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
@@ -205,8 +233,11 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
                 <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
                 <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
             </div>
-            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:20px; text-transform: capitalize;">📅 ${fechaStr}</p>
+            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px; text-transform: capitalize;">📅 ${fechaStr}</p>
             
+            <!-- CAJA DE ESTADO -->
+            ${cajaEstado}
+
             <div style="background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
                 <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">🤖 PICK IA (RESULTADO)</p>
                 <p style="color: ${color}; font-size: 16px; font-weight: 900;">${pick}</p>
