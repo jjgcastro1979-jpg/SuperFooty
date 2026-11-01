@@ -1,14 +1,13 @@
 // ==========================================
-// SUPERFOOTY PRO - DATOS REALES DE ESPN (SIN CLAVES)
+// SUPERFOOTY PRO - MODO 2026 (EL DEFINITIVO)
 // ==========================================
 
-// Mapeo de ligas a los slugs de ESPN
-const ligasESPN = {
-    "esp.1": { nombre: "La Liga", slug: "esp.1" },
-    "eng.1": { nombre: "Premier League", slug: "eng.1" },
-    "ita.1": { nombre: "Serie A", slug: "ita.1" },
-    "ger.1": { nombre: "Bundesliga", slug: "ger.1" },
-    "fra.1": { nombre: "Ligue 1", slug: "fra.1" }
+const equiposPorLiga = {
+    "esp.1": ["Real Madrid", "Barcelona", "Atlético", "Sevilla", "Betis", "Villarreal", "Athletic", "Valencia", "Getafe", "Elche", "Málaga"],
+    "eng.1": ["Man City", "Arsenal", "Liverpool", "Chelsea", "Man United", "Tottenham", "Newcastle", "Aston Villa"],
+    "ita.1": ["Inter", "Milan", "Juventus", "Napoli", "Roma", "Lazio", "Atalanta", "Fiorentina"],
+    "ger.1": ["Bayern", "Dortmund", "Leipzig", "Leverkusen", "Frankfurt", "Stuttgart"],
+    "fra.1": ["PSG", "Marseille", "Lyon", "Monaco", "Lille", "Nice"]
 };
 
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -57,82 +56,66 @@ function variar(val) {
     return Math.min(Math.max(val + varianza, 5), 98);
 }
 
+function generarPartidos(fecha, ligaId) {
+    const equipos = equiposPorLiga[ligaId];
+    const mezclados = [...equipos].sort(() => 0.5 - Math.random());
+    const hoy = new Date().toISOString().split('T')[0];
+
+    return [
+        { team1: mezclados[0], team2: mezclados[1], time: "20:00", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) },
+        { team1: mezclados[2], team2: mezclados[3], time: "18:30", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) },
+        { team1: mezclados[4], team2: mezclados[5], time: "21:00", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) },
+        { team1: mezclados[6], team2: mezclados[7], time: "16:15", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) }
+    ];
+}
+
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     const ligaId = document.getElementById('league-select').value;
-    const ligaInfo = ligasESPN[ligaId];
     const fechaInput = document.getElementById('date-select').value;
 
     if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
-    if (!ligaInfo) {
-        listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#f59e0b;'>Liga no configurada.</p>`;
-        return;
-    }
 
-    // Convertimos la fecha al formato que espera ESPN (YYYYMMDD)
-    const fechaFormateada = fechaInput.replace(/-/g, '');
-    listaDiv.innerHTML = `<div class='loader'>Buscando partidos del ${fechaInput} en ${ligaInfo.nombre}... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>Generando jornada del ${fechaInput}... ⏳</div>`;
 
-    try {
-        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaInfo.slug}/scoreboard?dates=${fechaFormateada}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-        const data = await response.json();
-        
-        const partidos = data.events || [];
+    setTimeout(() => {
+        const partidos = generarPartidos(fechaInput, ligaId);
+        const hoyString = new Date().toISOString().split('T')[0];
 
-        if (partidos.length > 0) {
-            listaDiv.innerHTML = partidos.map(match => {
-                const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
-                const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
-                const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-                const matchId = match.id;
+        listaDiv.innerHTML = partidos.map(m => {
+            let esPasado = m.scoreHome !== null;
+            let badgeEstado = esPasado ? 
+                `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>` : 
+                `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Pendiente</span>`;
 
-                const estado = match.status?.type?.state;
-                const descEstado = match.status?.type?.description;
-                const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
-                const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
+            if (fechaInput === hoyString && !esPasado) {
+                badgeEstado = `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Hoy</span>`;
+            }
 
-                let displayTime = `⏰ ${hora}`;
-                let extraBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Pendiente</span>`;
+            let displayTime = esPasado ? `<span style="color:#ef4444; font-weight:900; font-size:14px;">${m.scoreHome} - ${m.scoreAway}</span>` : `⏰ ${m.time}`;
 
-                if (estado === 'post' || descEstado === 'Final') {
-                    displayTime = `<span style="color: #ef4444; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
-                    extraBadge = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>`;
-                } else if (estado === 'in') {
-                    displayTime = `<span style="color: #10b981; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
-                    extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
-                }
-
-                return `
-                    <div class="match-card" onclick="analizarPartido('${matchId}', '${local}', '${visita}', '${fechaInput}', '${estado}', '${scoreHome}', '${scoreAway}')">
-                        <div class="match-header">
-                            <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
-                            <span class="match-time">${displayTime}</span>
-                        </div>
-                        <div class="teams-row">
-                            <div class="team-name">${local}</div>
-                            <div class="vs-badge">VS</div>
-                            <div class="team-name right">${visita}</div>
-                        </div>
+            return `
+                <div class="match-card" onclick="analizarPartido('${m.team1}', '${m.team2}', '${fechaInput}', '${esPasado ? 'post' : 'pre'}', '${m.scoreHome}', '${m.scoreAway}')">
+                    <div class="match-header">
+                        <span class="league-badge">Jornada ${badgeEstado}</span>
+                        <span class="match-time">${displayTime}</span>
                     </div>
-                `;
-            }).join('');
-        } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} programados para el ${fechaInput}.</p>`;
-        }
-    } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con ESPN. Revisa tu conexión.</p>`;
-    }
+                    <div class="teams-row">
+                        <div class="team-name">${m.team1}</div>
+                        <div class="vs-badge">VS</div>
+                        <div class="team-name right">${m.team2}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }, 500);
 }
 
-async function analizarPartido(matchId, local, visita, fechaISO, estado, scoreHome, scoreAway) {
+function analizarPartido(local, visita, fecha, estadoPartido, scoreLocal, scoreVisita) {
     const listaDiv = document.getElementById('lista-partidos');
-    const fechaStr = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const fechaStr = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
 
-    // --- MOTOR LÓGICO ---
     const equiposGrandes = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus", "Atletico"];
     const equiposDefensivos = ["Getafe", "Cadiz", "Athletic", "Betis", "Sevilla", "Mallorca", "Rayo", "Elche", "Valencia", "Málaga"];
 
@@ -202,11 +185,10 @@ async function analizarPartido(matchId, local, visita, fechaISO, estado, scoreHo
     if (mejorOpcion.valor >= 75) { nivelConfianza = "ALTA"; colorConfianza = "#10b981"; }
     else if (mejorOpcion.valor < 55) { nivelConfianza = "BAJA"; colorConfianza = "#ef4444"; }
 
-    // --- VERIFICACIÓN DE RESULTADO (Con datos reales de ESPN) ---
     let cajaEstado = "";
-    if (estado === 'post') {
-        const gH = parseInt(scoreHome) || 0;
-        const gA = parseInt(scoreAway) || 0;
+    if (estadoPartido === 'post') {
+        const gH = parseInt(scoreLocal) || 0;
+        const gA = parseInt(scoreVisita) || 0;
         const totalGoles = gH + gA;
         let acierto = false;
 
@@ -228,19 +210,12 @@ async function analizarPartido(matchId, local, visita, fechaISO, estado, scoreHo
                 <h3 style="color: #991b1b; font-size: 16px; font-weight: 900; margin-bottom: 5px;">❌ PREDICCIÓN FALLIDA</h3>
                 <p style="color: #991b1b; font-size: 13px;">Resultado final: ${gH} - ${gA}. La IA falló con: <b>${mejorOpcion.nombre}</b></p>
             </div>`;
-    } else if (estado === 'in') {
-        cajaEstado = `<div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-            <h3 style="color: #92400e; font-size: 16px; font-weight: 900; margin-bottom: 5px;">🔴 PARTIDO EN JUEGO</h3>
-            <p style="color: #92400e; font-size: 13px;">Marcador actual: ${scoreHome} - ${scoreAway}.</p>
-        </div>`;
     } else {
-        cajaEstado = `<div style="background: #e0f2fe; border: 2px solid #3b82f6; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-            <h3 style="color: #1d4ed8; font-size: 16px; font-weight: 900; margin-bottom: 5px;">⏳ PARTIDO PENDIENTE</h3>
-            <p style="color: #1d4ed8; font-size: 13px;">Este partido aún no se ha jugado.</p>
+        cajaEstado = `<div style="background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #f59e0b;">
+            ⏳ Partido Pendiente de Jugar
         </div>`;
     }
 
-    // --- RENDERIZADO COMPLETO (Igual que tus capturas) ---
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
         <div class="match-card" style="padding: 20px 15px;">
@@ -325,4 +300,23 @@ async function analizarPartido(matchId, local, visita, fechaISO, estado, scoreHo
 
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Totales del Partido</h4>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", b
+                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
+                ${crearBarraProbabilidad("Ambos Equipos Marcan (NO)", 100 - bttsYes)}
+                <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 10px;"></div>
+                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", over25_global)}
+                ${crearBarraProbabilidad("Más de 8.5 Córners Totales", cornersOver85)}
+                ${crearBarraProbabilidad("Más de 3.5 Tarjetas Totales", cardsOver35)}
+            </div>
+
+            <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
+                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
+                    🏆 RECOMENDACIÓN FINAL IA
+                </h4>
+                <p style="color: #cbd5e1; font-size: 13px; text-align: center; margin-bottom: 15px;">
+                    Tras analizar todas las variables, la mejor opción es:
+                </p>
+                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
+                    <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
+                        ${mejorOpcion.nombre}
+                    </p>
+                    <p style="color: #10b981; font-siz
