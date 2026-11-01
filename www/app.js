@@ -1,13 +1,13 @@
 // ==========================================
-// SUPERFOOTY PRO - MODO 2026 (EL DEFINITIVO)
+// SUPERFOOTY PRO - DATOS REALES EN VIVO (ESPN)
 // ==========================================
 
-const equiposPorLiga = {
-    "esp.1": ["Real Madrid", "Barcelona", "Atlético", "Sevilla", "Betis", "Villarreal", "Athletic", "Valencia", "Getafe", "Elche", "Málaga"],
-    "eng.1": ["Man City", "Arsenal", "Liverpool", "Chelsea", "Man United", "Tottenham", "Newcastle", "Aston Villa"],
-    "ita.1": ["Inter", "Milan", "Juventus", "Napoli", "Roma", "Lazio", "Atalanta", "Fiorentina"],
-    "ger.1": ["Bayern", "Dortmund", "Leipzig", "Leverkusen", "Frankfurt", "Stuttgart"],
-    "fra.1": ["PSG", "Marseille", "Lyon", "Monaco", "Lille", "Nice"]
+const ligasESPN = {
+    "esp.1": { nombre: "La Liga", slug: "esp.1" },
+    "eng.1": { nombre: "Premier League", slug: "eng.1" },
+    "ita.1": { nombre: "Serie A", slug: "ita.1" },
+    "ger.1": { nombre: "Bundesliga", slug: "ger.1" },
+    "fra.1": { nombre: "Ligue 1", slug: "fra.1" }
 };
 
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -56,64 +56,77 @@ function variar(val) {
     return Math.min(Math.max(val + varianza, 5), 98);
 }
 
-function generarPartidos(fecha, ligaId) {
-    const equipos = equiposPorLiga[ligaId];
-    const mezclados = [...equipos].sort(() => 0.5 - Math.random());
-    const hoy = new Date().toISOString().split('T')[0];
-
-    return [
-        { team1: mezclados[0], team2: mezclados[1], time: "20:00", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) },
-        { team1: mezclados[2], team2: mezclados[3], time: "18:30", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) },
-        { team1: mezclados[4], team2: mezclados[5], time: "21:00", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) },
-        { team1: mezclados[6], team2: mezclados[7], time: "16:15", scoreHome: (fecha < hoy ? Math.floor(Math.random()*3) : null), scoreAway: (fecha < hoy ? Math.floor(Math.random()*3) : null) }
-    ];
-}
-
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     const ligaId = document.getElementById('league-select').value;
-    const fechaInput = document.getElementById('date-select').value;
+    const ligaInfo = ligasESPN[ligaId];
 
-    if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
+    if (!ligaInfo) {
+        listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#f59e0b;'>Liga no configurada.</p>`;
+        return;
+    }
 
-    listaDiv.innerHTML = `<div class='loader'>Generando jornada del ${fechaInput}... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>Buscando partidos en tiempo real... ⏳</div>`;
 
-    setTimeout(() => {
-        const partidos = generarPartidos(fechaInput, ligaId);
-        const hoyString = new Date().toISOString().split('T')[0];
+    try {
+        // LE PEDIMOS A ESPN LOS PARTIDOS ACTUALES (SIN FECHA, SOLO EL PRESENTE)
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaInfo.slug}/scoreboard`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        const data = await response.json();
+        
+        const partidos = data.events || [];
 
-        listaDiv.innerHTML = partidos.map(m => {
-            let esPasado = m.scoreHome !== null;
-            let badgeEstado = esPasado ? 
-                `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>` : 
-                `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Pendiente</span>`;
+        if (partidos.length > 0) {
+            listaDiv.innerHTML = partidos.map(match => {
+                const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
+                const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
+                
+                // Formateamos la fecha real del partido que nos da la API
+                const fechaReal = new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                
+                const estado = match.status?.type?.state;
+                const descEstado = match.status?.type?.description;
+                const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
+                const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
 
-            if (fechaInput === hoyString && !esPasado) {
-                badgeEstado = `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Hoy</span>`;
-            }
+                let displayTime = `⏰ ${hora}`;
+                let extraBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Pendiente</span>`;
 
-            let displayTime = esPasado ? `<span style="color:#ef4444; font-weight:900; font-size:14px;">${m.scoreHome} - ${m.scoreAway}</span>` : `⏰ ${m.time}`;
+                if (estado === 'post' || descEstado === 'Final') {
+                    displayTime = `<span style="color: #ef4444; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>`;
+                } else if (estado === 'in') {
+                    displayTime = `<span style="color: #10b981; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
+                }
 
-            return `
-                <div class="match-card" onclick="analizarPartido('${m.team1}', '${m.team2}', '${fechaInput}', '${esPasado ? 'post' : 'pre'}', '${m.scoreHome}', '${m.scoreAway}')">
-                    <div class="match-header">
-                        <span class="league-badge">Jornada ${badgeEstado}</span>
-                        <span class="match-time">${displayTime}</span>
+                return `
+                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaReal}', '${estado}', '${scoreHome}', '${scoreAway}')">
+                        <div class="match-header">
+                            <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
+                            <span class="match-time">📅 ${fechaReal} - ${displayTime}</span>
+                        </div>
+                        <div class="teams-row">
+                            <div class="team-name">${local}</div>
+                            <div class="vs-badge">VS</div>
+                            <div class="team-name right">${visita}</div>
+                        </div>
                     </div>
-                    <div class="teams-row">
-                        <div class="team-name">${m.team1}</div>
-                        <div class="vs-badge">VS</div>
-                        <div class="team-name right">${m.team2}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }, 500);
+                `;
+            }).join('');
+        } else {
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} programados para hoy en la vida real.</p>`;
+        }
+    } catch (error) {
+        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con ESPN. Revisa tu conexión.</p>`;
+    }
 }
 
 function analizarPartido(local, visita, fecha, estadoPartido, scoreLocal, scoreVisita) {
     const listaDiv = document.getElementById('lista-partidos');
-    const fechaStr = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
 
     const equiposGrandes = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus", "Atletico"];
@@ -189,27 +202,13 @@ function analizarPartido(local, visita, fecha, estadoPartido, scoreLocal, scoreV
     if (estadoPartido === 'post') {
         const gH = parseInt(scoreLocal) || 0;
         const gA = parseInt(scoreVisita) || 0;
-        const totalGoles = gH + gA;
-        let acierto = false;
-
-        if (mejorOpcion.nombre.includes(`Victoria ${local}`) && gH > gA) acierto = true;
-        else if (mejorOpcion.nombre === "Empate" && gH === gA) acierto = true;
-        else if (mejorOpcion.nombre.includes(`Victoria ${visita}`) && gA > gH) acierto = true;
-        else if (mejorOpcion.nombre === "Más de 2.5 Goles" && totalGoles > 2.5) acierto = true;
-        else if (mejorOpcion.nombre === "Menos de 2.5 Goles" && totalGoles < 2.5) acierto = true;
-        else if (mejorOpcion.nombre === "Ambos Equipos Marcan (SÍ)" && gH > 0 && gA > 0) acierto = true;
-        else if (mejorOpcion.nombre === "Ambos Equipos Marcan (NO)" && (gH === 0 || gA === 0)) acierto = true;
-        else if (mejorOpcion.nombre.includes("Córners") || mejorOpcion.nombre.includes("Tarjetas")) acierto = Math.random() > 0.4;
-
-        cajaEstado = acierto ? 
-            `<div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-                <h3 style="color: #065f46; font-size: 16px; font-weight: 900; margin-bottom: 5px;">✅ PREDICCIÓN ACERTADA</h3>
-                <p style="color: #065f46; font-size: 13px;">Resultado final: ${gH} - ${gA}. La IA acertó con: <b>${mejorOpcion.nombre}</b></p>
-            </div>` :
-            `<div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-                <h3 style="color: #991b1b; font-size: 16px; font-weight: 900; margin-bottom: 5px;">❌ PREDICCIÓN FALLIDA</h3>
-                <p style="color: #991b1b; font-size: 13px;">Resultado final: ${gH} - ${gA}. La IA falló con: <b>${mejorOpcion.nombre}</b></p>
-            </div>`;
+        cajaEstado = `<div style="background: #e2e8f0; color: #333; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #cbd5e1;">
+            🏁 Partido Finalizado: ${local} ${gH} - ${gA} ${visita}
+        </div>`;
+    } else if (estadoPartido === 'in') {
+        cajaEstado = `<div style="background: #d1fae5; color: #065f46; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #10b981;">
+            🔴 Partido en Juego: ${scoreLocal} - ${scoreVisita}
+        </div>`;
     } else {
         cajaEstado = `<div style="background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #f59e0b;">
             ⏳ Partido Pendiente de Jugar
@@ -225,7 +224,7 @@ function analizarPartido(local, visita, fecha, estadoPartido, scoreLocal, scoreV
                 <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
                 <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
             </div>
-            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px; text-transform: capitalize;">📅 ${fechaStr}</p>
+            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px;">📅 ${fecha}</p>
             
             ${cajaEstado}
 
@@ -319,4 +318,21 @@ function analizarPartido(local, visita, fecha, estadoPartido, scoreLocal, scoreV
                     <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
                         ${mejorOpcion.nombre}
                     </p>
-                    <p style="color: #10b981; font-siz
+                    <p style="color: #10b981; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
+                        ${Math.round(mejorOpcion.valor)}% de probabilidad
+                    </p>
+                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid ${colorConfianza};">
+                        CONFIANZA: ${nivelConfianza}
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    `;
+
+    setTimeout(() => {
+        document.querySelectorAll('.duel-bar-left, .duel-bar-right').forEach(bar => {
+            bar.style.width = bar.getAttribute('data-width');
+        });
+    }, 100);
+                                                 }
