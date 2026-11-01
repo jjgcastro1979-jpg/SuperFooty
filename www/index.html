@@ -3,173 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperFooty</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: https://ssl.gstatic.com; connect-src *;">
+    <title>SuperFooty | Análisis IA</title>
     <style>
         :root {
-            --azul-fondo: #0a192f;
-            --azul-tarjeta: #172a45;
-            --amarillo-ia: #f6c23e;
-            --blanco: #ffffff;
-            --gris: #8892b0;
-            --ia-verde: #10b981;
-            --rojo-aviso: #ef4444;
+            --primary: #1e3a8a;
+            --accent: #10b981;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
-        body { background: var(--azul-fondo); color: var(--blanco); min-height: 100vh; padding-bottom: 70px; }
-        .container { padding: 20px; max-width: 480px; margin: 0 auto; }
-        .app-header { text-align: center; margin-bottom: 25px; }
-        .logo-icon { font-size: 28px; }
-        .app-name { font-size: 22px; color: var(--amarillo-ia); margin: 5px 0; }
-        .date-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .date-btn { background: var(--azul-tarjeta); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 18px; cursor: pointer; }
-        .top-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
-        .top-btn { flex: 1; padding: 15px; border: none; border-radius: 10px; font-size: 14px; cursor: pointer; }
-        .top-btn.ia { background: var(--amarillo-ia); color: #000; font-weight: bold; }
-        .top-btn.stat { background: var(--azul-tarjeta); color: white; }
-        .filters { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 20px; }
-        .filter-tag { padding: 8px 14px; border-radius: 20px; border: none; white-space: nowrap; cursor: pointer; }
-        .filter-tag.live { background: var(--ia-verde); color: white; }
-        .filter-tag:not(.live) { background: var(--azul-tarjeta); color: var(--gris); }
-        .featured-card { background: var(--azul-tarjeta); border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: center; }
-        .star-icon { font-size: 24px; margin-bottom: 8px; }
-        .selection-area { text-align: center; margin-bottom: 25px; }
-        .select-text, .live-text { color: var(--gris); font-size: 14px; margin-bottom: 8px; }
-        .controls-area { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
-        .form-select, .form-control { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--azul-tarjeta); color: white; font-size: 15px; }
-        .load-btn { background: var(--amarillo-ia); color: #000; font-weight: bold; border: none; padding: 14px; border-radius: 8px; font-size: 16px; cursor: pointer; }
-        .matches-list { display: flex; flex-direction: column; gap: 10px; }
-        .match-card { background: var(--azul-tarjeta); border-radius: 10px; padding: 15px; cursor: pointer; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--azul-tarjeta); display: flex; justify-content: space-around; padding: 10px 0; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: var(--gris); cursor: pointer; }
-        .nav-item.active { color: var(--amarillo-ia); }
-        .nav-icon { font-size: 20px; margin-bottom: 3px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--light); color: var(--dark); padding-bottom: 70px; }
+        
+        header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: center; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .logo { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+        .logo span { color: var(--accent); }
+        
+        nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; border-top: 1px solid #e2e8f0; }
+        nav a { color: var(--gray); text-decoration: none; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        nav a.active { color: var(--primary); }
+        
+        .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: fadeIn 0.4s ease-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--dark); border-left: 5px solid var(--accent); padding-left: 10px;}
+        
+        .match-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; transition: transform 0.2s; }
+        .match-card:active { transform: scale(0.98); }
+        .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .league-badge { background: #e0e7ff; color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .match-time { color: var(--gray); font-size: 13px; font-weight: bold; }
+        .teams-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .team-name { font-size: 16px; font-weight: bold; width: 40%; }
+        .team-name.right { text-align: right; }
+        .vs-badge { background: var(--dark); color: white; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
+        
+        .btn { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 15px; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .btn:active { background: #059669; }
+        
+        .loader { text-align: center; font-weight: bold; color: var(--primary); padding: 30px; }
+        
+        select, input[type="date"] { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; background: white; font-size: 15px; font-weight: bold; color: var(--dark); }
+
+        /* --- ESTILOS DE LAS BARRAS DE DUELO --- */
+        .duel-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .duel-stats {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            gap: 5px;
+        }
+        .duel-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+        .duel-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            display: flex;
+            overflow: hidden;
+        }
+        .duel-bar-left {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 5px 0 0 5px;
+            transition: width 1s ease-out;
+        }
+        .duel-bar-right {
+            height: 100%;
+            background: linear-gradient(90deg, #f87171, #ef4444);
+            border-radius: 0 5px 5px 0;
+            transition: width 1s ease-out;
+        }
+        .duel-bar-left.mid { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .duel-bar-right.mid { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header class="app-header">
-            <span class="logo-icon">⚙️</span>
-            <h1 class="app-name">MIS PRONÓSTICOS AI</h1>
-            <p style="color: var(--gris); font-size: 14px;">Análisis deportivo en vivo</p>
-        </header>
+    <header>
+        <div class="logo">⚽ SUPER<span>FOOTY</span></div>
+    </header>
 
-        <div class="date-nav">
-            <button class="date-btn" id="prevDate">←</button>
-            <div>
-                <div style="font-weight:bold;" id="currentDay">Hoy</div>
-                <div style="font-size:12px; color:var(--gris)" id="currentDate"></div>
-            </div>
-            <button class="date-btn" id="nextDate">→</button>
+    <main id="inicio" class="page active">
+        <div style="background: linear-gradient(135deg, var(--primary), #3b82f6); color: white; padding: 30px; border-radius: 20px; text-align: center; margin-bottom: 20px;">
+            <h1 style="font-size: 28px; margin-bottom: 10px;">Bienvenido a SuperFooty</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Analiza y predice los partidos con Inteligencia Artificial.</p>
+            <button class="btn" onclick="showPage('partidos')" style="background:white; color:var(--primary); box-shadow:none;">Empezar a Analizar</button>
         </div>
+    </main>
 
-        <div class="top-buttons">
-            <button class="top-btn ia" id="btnTopIA">⚡ Top IA<br><span style="font-size:11px">Mejores del día</span></button>
-            <button class="top-btn stat" id="btnStats">📊 Estadístico<br><span style="font-size:11px">Top Calculados</span></button>
-        </div>
+    <main id="partidos" class="page">
+        <h2>Partidos y Análisis</h2>
+        
+        <select id="league-select">
+            <option value="eng.1">Premier League (Inglaterra)</option>
+            <option value="esp.1">La Liga (España)</option>
+            <option value="ita.1">Serie A (Italia)</option>
+            <option value="ger.1">Bundesliga (Alemania)</option>
+            <option value="fra.1">Ligue 1 (Francia)</option>
+            <option value="uefa.champions">Champions League</option>
+        </select>
 
-        <div class="filters">
-            <button class="filter-tag live">🔴 En vivo</button>
-            <button class="filter-tag">Por jugador</button>
-            <button class="filter-tag">Por fecha</button>
-        </div>
+        <input type="date" id="date-select">
 
-        <div class="featured-card">
-            <span class="star-icon">⭐</span>
-            <h3>Análisis del equipo</h3>
-            <p style="color: var(--gris); font-size: 14px; margin-top: 5px;">Lecturas del partido</p>
+        <div id="lista-partidos">
+            <div class="loader">Elige una fecha y pulsa Generar...</div>
         </div>
+        
+        <br>
+        <button class="btn" onclick="cargarPartidos()">🔄 Generar Partidos</button>
+    </main>
 
-        <div class="selection-area">
-            <p class="select-text">Selecciona un partido para ver el análisis</p>
-            <p class="live-text">Pulsa para ver el LIVE</p>
-            <div class="controls-area">
-                <select id="league-select" class="form-select">
-                    <option value="">Selecciona una liga</option>
-                    <option value="eng.1">Premier League</option>
-                    <option value="esp.1">La Liga</option>
-                    <option value="ita.1">Serie A</option>
-                    <option value="ger.1">Bundesliga</option>
-                    <option value="fra.1">Ligue 1</option>
-                    <option value="uefa.champions">Champions League</option>
-                </select>
-                <input type="date" id="date-select" class="form-control">
-                <button onclick="cargarPartidos()" class="load-btn">🔍 Buscar Partidos</button>
-            </div>
+    <main id="equipos" class="page">
+        <h2>Equipos</h2>
+        <div class="match-card">
+            <h3>🛡️ Base de Datos</h3>
+            <p style="font-size:13px; color:#64748b; margin-top:5px;">Próximamente podrás buscar cualquier equipo del mundo.</p>
         </div>
+    </main>
 
-        <div id="lista-partidos" class="matches-list"></div>
-    </div>
-
-    <nav class="bottom-nav">
-        <div class="nav-item active">
-            <div class="nav-icon">⚽</div>
-            <div>Partidos</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">⭐</div>
-            <div>Guardados</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">❓</div>
-            <div>Ayuda</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">👑</div>
-            <div>Mejorar plan</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">⚙️</div>
-            <div>Opciones</div>
-        </div>
+    <nav>
+        <a id="nav-inicio" class="active" onclick="showPage('inicio')">🏠 <span>Inicio</span></a>
+        <a id="nav-partidos" onclick="showPage('partidos')">⚽ <span>Partidos IA</span></a>
+        <a id="nav-equipos" onclick="showPage('equipos')">🛡️ <span>Equipos</span></a>
     </nav>
 
+    <script src="cordova.js"></script>
+    <script src="cache.js"></script>
+    <script src="app.js"></script>
+    
     <script>
-        // Fecha de hoy automática
-        document.addEventListener('DOMContentLoaded', function() {
-            const hoy = new Date();
-            const fechaInput = document.getElementById('date-select');
-            if (fechaInput) fechaInput.valueAsDate = hoy;
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('nav a').forEach(nav => nav.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.getElementById('nav-' + pageId).classList.add('active');
             
-            const opciones = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('currentDate').textContent = hoy.toLocaleDateString('es-ES', opciones);
-        });
-
-        function cargarPartidos() {
-            const liga = document.getElementById('league-select').value;
-            const fecha = document.getElementById('date-select').value;
-            const lista = document.getElementById('lista-partidos');
-            
-            if (!fecha) {
-                alert("Selecciona una fecha");
-                return;
+            if(pageId === 'partidos' && document.getElementById('lista-partidos').innerHTML.includes('Elige una fecha')) {
+                let hoy = new Date();
+                document.getElementById('date-select').value = hoy.toISOString().split('T')[0];
             }
-            
-            lista.innerHTML = '<div style="text-align:center; padding:30px;">⚽ Cargando partidos... ⏳</div>';
-            
-            // Simulación de partidos mientras se conecta la API
-            setTimeout(() => {
-                if (!liga) {
-                    lista.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:40px 20px;">Selecciona una liga para ver los partidos</p>';
-                    return;
-                }
-                
-                lista.innerHTML = `
-                    <div class="match-card" onclick="alert('Análisis disponible pronto')">
-                        <div style="padding:10px 0;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                <span style="font-size:12px; color:#94a3b8;">${liga.toUpperCase()}</span>
-                                <span style="font-size:13px;">⏰ 21:00</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="font-weight:bold;">Equipo Local</span>
-                                <span style="color:#94a3b8; font-size:12px;">vs</span>
-                                <span style="font-weight:bold;">Equipo Visita</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="text-align:center; margin-top:20px; color:#10b981; font-size:13px;">✅ Botón funcionando</div>
-                `;
-            }, 800);
         }
     </script>
 </body>
