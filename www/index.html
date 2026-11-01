@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA -->
         <header class="app-header">
             <div class="logo-row">
                 <span class="logo-icon">⚙️</span>
@@ -17,7 +16,6 @@
             <p class="app-desc">Análisis deportivo en vivo</p>
         </header>
 
-        <!-- FECHA -->
         <div class="date-nav">
             <button class="date-btn" id="prevDate">←</button>
             <div class="date-center">
@@ -28,7 +26,6 @@
             <button class="date-btn" id="nextDate">→</button>
         </div>
 
-        <!-- BOTONES PRINCIPALES -->
         <div class="top-buttons">
             <button class="top-btn ia active" id="btnTopIA">
                 <span class="bolt">⚡</span> Top IA
@@ -40,14 +37,12 @@
             </button>
         </div>
 
-        <!-- FILTROS -->
         <div class="filters">
             <button class="filter-tag live active" data-filter="live">🔴 En vivo</button>
             <button class="filter-tag" data-filter="player">Por jugador</button>
             <button class="filter-tag" data-filter="date">Por fecha</button>
         </div>
 
-        <!-- TARJETA DESTACADA -->
         <div class="featured-card">
             <div class="star-icon">⭐</div>
             <div class="featured-text">
@@ -56,7 +51,6 @@
             </div>
         </div>
 
-        <!-- SELECCIÓN DE PARTIDOS -->
         <div class="selection-area">
             <p class="select-text">Selecciona un partido para ver el análisis</p>
             <p class="live-text">Pulsa para ver el LIVE</p>
@@ -64,23 +58,21 @@
             <div class="controls-area">
                 <select id="league-select" class="form-select">
                     <option value="">Selecciona una liga</option>
-                    <option value="eng.1">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
-                    <option value="esp.1">🇪🇸 La Liga</option>
-                    <option value="ita.1">🇮🇹 Serie A</option>
-                    <option value="ger.1">🇩🇪 Bundesliga</option>
-                    <option value="fra.1">🇫🇷 Ligue 1</option>
-                    <option value="uefa.champions">🏆 Champions League</option>
+                    <option value="eng.1">Premier League</option>
+                    <option value="esp.1">La Liga</option>
+                    <option value="ita.1">Serie A</option>
+                    <option value="ger.1">Bundesliga</option>
+                    <option value="fra.1">Ligue 1</option>
+                    <option value="uefa.champions">Champions League</option>
                 </select>
                 <input type="date" id="date-select" class="form-control">
                 <button onclick="cargarPartidos()" class="load-btn">🔍 Buscar Partidos</button>
             </div>
         </div>
 
-        <!-- LISTA DE PARTIDOS -->
         <div id="lista-partidos" class="matches-list"></div>
     </div>
 
-    <!-- BARRA INFERIOR -->
     <nav class="bottom-nav">
         <div class="nav-item active" data-nav="matches">
             <div class="nav-icon">⚽</div>
