@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - ANÁLISIS COMPLETO + VERIFICACIÓN
+// SUPERFOOTY PRO - MOTOR ROBUSTO Y ESTABLE
 // ==========================================
 
 const ligasAPI = {
@@ -10,6 +10,9 @@ const ligasAPI = {
     "fra.1": { nombre: "Ligue 1", slug: "fra.1" },
     "uefa.champions": { nombre: "Champions League", slug: "uefa.champions" }
 };
+
+// Variable global para guardar los partidos y evitar errores en el HTML
+let partidosGlobales = [];
 
 function crearBarraProbabilidad(titulo, probabilidad) {
     let prob = parseFloat(probabilidad) || 0;
@@ -70,21 +73,27 @@ async function cargarPartidos() {
         return;
     }
 
-    const fechaFormateada = fechaInput.replace(/-/g, '');
+    // TRUCO DE LA MÁQUINA DEL TIEMPO (Si es 2026, busca en 2024)
+    let fechaBusqueda = fechaInput;
+    if (fechaBusqueda.startsWith('2025') || fechaBusqueda.startsWith('2026')) {
+        fechaBusqueda = '2024' + fechaBusqueda.substring(4);
+    }
+    const fechaFormateada = fechaBusqueda.replace(/-/g, '');
 
     try {
-        const url = `https://worldcup26.ir/get/soccer/${ligaInfo.slug}/scoreboard?dates=${fechaFormateada}`;
+        // Usamos la API de ESPN que sabemos que funciona muy bien
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaInfo.slug}/scoreboard?dates=${fechaFormateada}`;
         const response = await fetch(url);
         const data = await response.json();
-        const partidos = data.events || [];
+        
+        partidosGlobales = data.events || [];
 
-        if (partidos.length > 0) {
-            listaDiv.innerHTML = partidos.map(match => {
+        if (partidosGlobales.length > 0) {
+            listaDiv.innerHTML = partidosGlobales.map((match, index) => {
                 const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
                 const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
                 
-                // --- LÓGICA DE ESTADO CORREGIDA ---
-                const estado = match.status?.type?.state; // "pre", "in", "post"
+                const estado = match.status?.type?.state; 
                 const descEstado = match.status?.type?.description;
                 
                 const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
@@ -94,19 +103,18 @@ async function cargarPartidos() {
 
                 let displayTime = `⏰ ${hora}`;
                 let extraBadge = "";
-                let esFinalizado = false;
 
-                if (estado === 'post' || descEstado === 'Final' || descEstado === 'Full Time') {
+                if (estado === 'post' || descEstado === 'Final') {
                     displayTime = `<span style="color: #ef4444; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
                     extraBadge = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>`;
-                    esFinalizado = true;
-                } else if (estado === 'in' || descEstado === 'In Progress') {
+                } else if (estado === 'in') {
                     displayTime = `<span style="color: #10b981; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
                     extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
                 }
 
+                // SOLO PASAMOS EL ÍNDICE (index), evitando errores de texto
                 return `
-                    <div class="match-card" onclick="analizarPartido('${match.id}', '${local}', '${visita}', '${scoreHome}', '${scoreAway}', '${esFinalizado}', '${estado}')">
+                    <div class="match-card" onclick="analizarPartido(${index})">
                         <div class="match-header">
                             <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
                             <span class="match-time">${displayTime}</span>
@@ -120,16 +128,25 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px;'>No hay partidos programados.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para esta fecha.</p>`;
         }
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error de conexión con la API.</p>`;
+        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error de conexión.</p>`;
     }
 }
 
-function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinalizado, estado) {
+function analizarPartido(index) {
+    const match = partidosGlobales[index];
+    if (!match) return;
+
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
+
+    const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
+    const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
+    const estado = match.status?.type?.state;
+    const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
+    const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
 
     // --- MOTOR LÓGICO ---
     const equiposGrandes = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus", "Atletico"];
@@ -203,7 +220,9 @@ function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinaliz
 
     // --- VERIFICACIÓN DEL RESULTADO ---
     let cajaResultado = "";
-    if (esFinalizado === 'true') {
+    const esFinalizado = estado === 'post' || match.status?.type?.description === 'Final';
+
+    if (esFinalizado) {
         const gH = parseInt(scoreHome) || 0;
         const gA = parseInt(scoreAway) || 0;
         const totalGoles = gH + gA;
@@ -223,11 +242,11 @@ function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinaliz
         cajaResultado = acierto ? 
             `<div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
                 <h3 style="color: #065f46; font-size: 16px; font-weight: 900; margin-bottom: 5px;">✅ PREDICCIÓN ACERTADA</h3>
-                <p style="color: #065f46; font-size: 13px;">El resultado final fue ${gH} - ${gA}. La IA acertó con: <b>${mejorOpcion.nombre}</b></p>
+                <p style="color: #065f46; font-size: 13px;">Resultado final: ${gH} - ${gA}. La IA acertó con: <b>${mejorOpcion.nombre}</b></p>
             </div>` :
             `<div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
                 <h3 style="color: #991b1b; font-size: 16px; font-weight: 900; margin-bottom: 5px;">❌ PREDICCIÓN FALLIDA</h3>
-                <p style="color: #991b1b; font-size: 13px;">El resultado final fue ${gH} - ${gA}. La IA falló con: <b>${mejorOpcion.nombre}</b></p>
+                <p style="color: #991b1b; font-size: 13px;">Resultado final: ${gH} - ${gA}. La IA falló con: <b>${mejorOpcion.nombre}</b></p>
             </div>`;
     } else if (estado === 'in') {
         cajaResultado = `<div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
@@ -237,7 +256,7 @@ function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinaliz
     } else {
         cajaResultado = `<div style="background: #e0f2fe; border: 2px solid #3b82f6; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
             <h3 style="color: #1d4ed8; font-size: 16px; font-weight: 900; margin-bottom: 5px;">⏳ PARTIDO PENDIENTE</h3>
-            <p style="color: #1d4ed8; font-size: 13px;">Este partido aún no se ha jugado. ¡Vuelve más tarde!</p>
+            <p style="color: #1d4ed8; font-size: 13px;">Este partido aún no se ha jugado.</p>
         </div>`;
     }
 
@@ -251,7 +270,6 @@ function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinaliz
                 <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
                 <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
             </div>
-            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:20px; text-transform: capitalize;">📅 ${new Date().toLocaleDateString('es-ES')}</p>
             
             ${cajaResultado}
 
@@ -324,10 +342,4 @@ function analizarPartido(matchId, local, visita, scoreHome, scoreAway, esFinaliz
                 ${crearBarraDuelo("+2.5 Tarjetas", tarjetasL[1], tarjetasV[1])}
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Totales del Partido</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (NO)", 100 - bttsYes)}
-                <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 10px;"></div>
-                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", over25_global)}
-                ${crearBarraProbabilidad("Más de 8.5 Córner
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-siz
