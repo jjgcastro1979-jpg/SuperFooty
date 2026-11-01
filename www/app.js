@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - ANÁLISIS INDIVIDUAL Y GLOBAL
+// SUPERFOOTY PRO - ANÁLISIS PREMIUM CON CUOTAS
 // ==========================================
 
 const ligasAPI = {
@@ -11,18 +11,31 @@ const ligasAPI = {
     "uefa.champions": { nombre: "Champions League", slug: "uefa.champions" }
 };
 
-// Función para barras normales (Totales y Equipos)
-function crearBarraProbabilidad(titulo, probabilidad) {
+// Función para calcular la cuota de apuesta (1 / probabilidad)
+function calcularCuota(probabilidad) {
+    let prob = parseFloat(probabilidad);
+    if (prob <= 0 || isNaN(prob)) return "-";
+    let cuota = 100 / prob;
+    return cuota > 10 ? "10.0" : cuota.toFixed(2); // Limitamos a cuota máxima 10.0
+}
+
+// Función para barras normales
+function crearBarraProbabilidad(titulo, probabilidad, mostrarCuota = false) {
     let prob = parseFloat(probabilidad);
     if (isNaN(prob)) prob = 0;
     let color = "#ef4444"; 
     if (prob >= 65) color = "#10b981";
     else if (prob >= 40) color = "#f59e0b";
 
+    let cuotaHTML = "";
+    if (mostrarCuota) {
+        cuotaHTML = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">@${calcularCuota(prob)}</span>`;
+    }
+
     return `
         <div style="margin-bottom: 8px;">
             <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; margin-bottom: 4px;">
-                <span style="color: #475569;">${titulo}</span>
+                <span style="color: #475569;">${titulo} ${cuotaHTML}</span>
                 <span style="color: ${color};">${Math.round(prob)}%</span>
             </div>
             <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
@@ -112,7 +125,7 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     const fechaStr = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
 
-    // --- MOTOR LÓGICO DE ESTADÍSTICAS ---
+    // --- MOTOR LÓGICO ---
     const equiposGrandes = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus", "Atletico", "Valencia"];
     const equiposDefensivos = ["Getafe", "Cadiz", "Athletic", "Betis", "Sevilla", "Mallorca", "Rayo", "Elche"];
 
@@ -121,14 +134,12 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     const esLocalDef = equiposDefensivos.some(eq => local.includes(eq));
     const esVisitaDef = equiposDefensivos.some(eq => visita.includes(eq));
 
-    // Probabilidades base individuales [linea 0.5, linea 1.5, linea 2.5]
     let golesL = [80, 55, 30], golesV = [75, 50, 25];
     let cornersL = [85, 65, 40], cornersV = [80, 60, 35];
     let tarjetasL = [85, 60, 35], tarjetasV = [85, 60, 35];
     
     let pL = 33, pV = 33, pE = 34, pick = "Partido Igualado", color = "#f59e0b";
 
-    // Ajustes según los equipos
     if (esLocalTop && !esVisitaTop) {
         pL = 70; pV = 10; pE = 20; pick = `Gana ${local}`; color = "#10b981";
         golesL = [90, 75, 55]; golesV = [60, 35, 15];
@@ -146,13 +157,12 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
         tarjetasL = [95, 80, 60]; tarjetasV = [95, 80, 60];
     }
 
-    // Cálculos globales (Sacados de la media de los equipos)
     let over25_global = Math.min(Math.round(((golesL[2] + golesV[2]) / 2) + 15), 95);
     let bttsYes = Math.min(Math.round(((golesL[1] + golesV[1]) / 2) - 5), 95);
     let cornersOver85 = Math.min(Math.round(((cornersL[1] + cornersV[1]) / 2) + 10), 95);
     let cardsOver35 = Math.min(Math.round(((tarjetasL[1] + tarjetasV[1]) / 2) + 10), 95);
 
-    // --- CÁLCULO DE LA MEJOR OPCIÓN GLOBAL ---
+    // --- MEJOR OPCIÓN ---
     let opciones = [
         { nombre: `Victoria ${local}`, valor: pL },
         { nombre: `Empate`, valor: pE },
@@ -169,6 +179,12 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
 
     opciones.sort((a, b) => b.valor - a.valor);
     let mejorOpcion = opciones[0];
+
+    // Nivel de confianza
+    let nivelConfianza = "MEDIA";
+    let colorConfianza = "#f59e0b";
+    if (mejorOpcion.valor >= 75) { nivelConfianza = "ALTA"; colorConfianza = "#10b981"; }
+    else if (mejorOpcion.valor < 55) { nivelConfianza = "BAJA"; colorConfianza = "#ef4444"; }
 
     // --- RENDERIZADO HTML ---
     listaDiv.innerHTML = `
@@ -187,19 +203,19 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
                 <p style="color: ${color}; font-size: 16px; font-weight: 900;">${pick}</p>
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📊 Probabilidades 1X2</h4>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📊 Probabilidades 1X2 y Cuotas</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                ${crearBarraProbabilidad(`Victoria ${local}`, pL, true)}
+                ${crearBarraProbabilidad(`Empate`, pE, true)}
+                ${crearBarraProbabilidad(`Victoria ${visita}`, pV, true)}
+            </div>
+
+            <!-- AMBOS MARCAN (Destacado) -->
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad(`Victoria ${local}`, pL)}
-                ${crearBarraProbabilidad(`Empate`, pE)}
-                ${crearBarraProbabilidad(`Victoria ${visita}`, pV)}
+                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes, true)}
             </div>
 
-            <!-- AMBOS MARCAN -->
-            <div style="margin-bottom: 20px;">
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
-            </div>
-
-            <!-- GOLES INDIVIDUALES Y DUELO -->
+            <!-- GOLES -->
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles por Equipo</h4>
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                 <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -219,7 +235,7 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
                 ${crearBarraDuelo("+1.5 Goles", golesL[1], golesV[1])}
             </div>
 
-            <!-- CÓRNERS INDIVIDUALES Y DUELO -->
+            <!-- CÓRNERS -->
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners por Equipo</h4>
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                 <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -239,7 +255,7 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
                 ${crearBarraDuelo("+4.5 Córners", cornersL[1], cornersV[1])}
             </div>
 
-            <!-- TARJETAS INDIVIDUALES Y DUELO -->
+            <!-- TARJETAS -->
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🟨 Tarjetas por Equipo</h4>
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                 <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -262,9 +278,9 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
             <!-- TOTALES GLOBALES -->
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Totales del Partido</h4>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", over25_global)}
-                ${crearBarraProbabilidad("Más de 8.5 Córners Totales", cornersOver85)}
-                ${crearBarraProbabilidad("Más de 3.5 Tarjetas Totales", cardsOver35)}
+                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", over25_global, true)}
+                ${crearBarraProbabilidad("Más de 8.5 Córners Totales", cornersOver85, true)}
+                ${crearBarraProbabilidad("Más de 3.5 Tarjetas Totales", cardsOver35, true)}
             </div>
 
             <!-- RECOMENDACIÓN FINAL -->
@@ -279,9 +295,12 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
                     <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
                         ${mejorOpcion.nombre}
                     </p>
-                    <p style="color: #10b981; font-size: 14px; font-weight: bold;">
-                        ${Math.round(mejorOpcion.valor)}% de probabilidad
+                    <p style="color: #10b981; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
+                        ${Math.round(mejorOpcion.valor)}% de probabilidad (@${calcularCuota(mejorOpcion.valor)})
                     </p>
+                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid ${colorConfianza};">
+                        CONFIANZA: ${nivelConfianza}
+                    </span>
                 </div>
             </div>
 
@@ -294,4 +313,4 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
             bar.style.width = bar.getAttribute('data-width');
         });
     }, 100);
-}
+                                             }
