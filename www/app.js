@@ -1,10 +1,14 @@
 // ==========================================
-// SUPERFOOTY PRO - API 2026 SIN CLAVE (worldcup26.ir)
+// SUPERFOOTY PRO - API 2026 (TODAS LAS LIGAS)
 // ==========================================
 
 const ligasAPI = {
     "eng.1": { nombre: "Premier League", slug: "eng.1" },
-    "esp.1": { nombre: "La Liga", slug: "esp.1" }
+    "esp.1": { nombre: "La Liga", slug: "esp.1" },
+    "ita.1": { nombre: "Serie A", slug: "ita.1" },
+    "ger.1": { nombre: "Bundesliga", slug: "ger.1" },
+    "fra.1": { nombre: "Ligue 1", slug: "fra.1" },
+    "uefa.champions": { nombre: "Champions League", slug: "uefa.champions" }
 };
 
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -35,20 +39,22 @@ async function cargarPartidos() {
 
     if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
 
-    // Convertimos la fecha al formato que espera la API (YYYYMMDD)
+    // CANDADO DE SEGURIDAD: Si la liga no está en la lista, avisamos.
+    if (!ligaInfo) {
+        listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#f59e0b; font-weight:bold;'>La liga seleccionada aún no está configurada. Prueba con La Liga o Premier League.</p>`;
+        return;
+    }
+
     const fechaFormateada = fechaInput.replace(/-/g, '');
-    listaDiv.innerHTML = `<div class='loader'>Buscando partidos del ${fechaInput}... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>Buscando partidos del ${fechaInput} en ${ligaInfo.nombre}... ⏳</div>`;
 
     try {
-        // URL real de la API que no requiere clave
         const url = `https://worldcup26.ir/get/soccer/${ligaInfo.slug}/scoreboard?dates=${fechaFormateada}`;
         const response = await fetch(url);
         
         if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
         const data = await response.json();
-
-        // La API devuelve los partidos en `data.events` (similar a ESPN)
         const partidos = data.events || [];
 
         if (partidos.length > 0) {
@@ -73,11 +79,11 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} para el ${fechaInput}.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para el ${fechaInput} en ${ligaInfo.nombre}.</p>`;
         }
 
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con la API de 2026.<br><br>${error.message}</p>`;
+        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con la API.<br><br>${error.message}</p>`;
     }
 }
 
@@ -87,8 +93,7 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO) {
     
     listaDiv.innerHTML = `<div class='loader'>🧠 Analizando partido... ⏳</div>`;
 
-    // Análisis basado en la fuerza de los equipos
-    const equiposTop = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG"];
+    const equiposTop = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus"];
     const esLocalTop = equiposTop.some(eq => local.includes(eq));
     const esVisitaTop = equiposTop.some(eq => visita.includes(eq));
 
