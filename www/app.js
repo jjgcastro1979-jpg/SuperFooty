@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - MOTOR LÓGICO CORREGIDO + ESTADOS
+// SUPERFOOTY PRO - MOTOR LÓGICO CORREGIDO
 // ==========================================
 
 const ligasAPI = {
@@ -10,6 +10,16 @@ const ligasAPI = {
     "fra.1": { nombre: "Ligue 1", slug: "fra.1" },
     "uefa.champions": { nombre: "Champions League", slug: "uefa.champions" }
 };
+
+// === INICIALIZAR FECHA DE HOY AUTOMÁTICAMENTE ===
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('date-select');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = fechaHoy;
+    }
+    console.log('✅ SuperFooty Pro cargado — Fecha:', fechaHoy);
+});
 
 // Función para barras normales (Sin cuotas)
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -48,8 +58,8 @@ function crearBarraDuelo(titulo, probLocal, probVisita) {
                 <span style="color: #ef4444;">${Math.round(pV)}%</span>
             </div>
             <div class="duel-bar-bg">
-                <div class="duel-bar-left ${classL}" style="width: 0%;" data-width="${pL}%"></div>
-                <div class="duel-bar-right ${classR}" style="width: 0%;" data-width="${pV}%"></div>
+                <div class="duel-bar-left ${classL}" style="width: ${pL}%;"></div>
+                <div class="duel-bar-right ${classR}" style="width: ${pV}%;"></div>
             </div>
         </div>
     `;
@@ -57,18 +67,29 @@ function crearBarraDuelo(titulo, probLocal, probVisita) {
 
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
-    const ligaId = document.getElementById('league-select').value;
+    const ligaSelect = document.getElementById('league-select');
+    const dateSelect = document.getElementById('date-select');
+    
+    if (!ligaSelect || !dateSelect || !listaDiv) {
+        console.error('Faltan elementos en el HTML');
+        return;
+    }
+    
+    const ligaId = ligaSelect.value;
     const ligaInfo = ligasAPI[ligaId];
-    const fechaInput = document.getElementById('date-select').value;
+    const fechaInput = dateSelect.value;
 
-    if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
+    if (!fechaInput) { 
+        alert("Por favor, selecciona una fecha."); 
+        return; 
+    }
     if (!ligaInfo) {
         listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#f59e0b; font-weight:bold;'>La liga seleccionada no está configurada.</p>`;
         return;
     }
 
     const fechaFormateada = fechaInput.replace(/-/g, '');
-    listaDiv.innerHTML = `<div class='loader'>Buscando partidos del ${fechaInput} en ${ligaInfo.nombre}... ⏳</div>`;
+    listaDiv.innerHTML = `<div style="text-align:center; padding:30px;">⚽ Buscando partidos del ${fechaInput} en ${ligaInfo.nombre}... ⏳</div>`;
 
     try {
         const url = `https://worldcup26.ir/get/soccer/${ligaInfo.slug}/scoreboard?dates=${fechaFormateada}`;
@@ -85,8 +106,7 @@ async function cargarPartidos() {
                 const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 const matchId = match.id;
 
-                // --- NUEVO: Lógica para saber si está finalizado o pendiente ---
-                const estado = match.status?.type?.state; // "pre", "in", "post"
+                const estado = match.status?.type?.state;
                 const descEstado = match.status?.type?.description;
                 const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
                 const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
@@ -102,42 +122,43 @@ async function cargarPartidos() {
                     extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
                 }
 
-                // Pasamos el estado al análisis
                 return `
-                    <div class="match-card" onclick="analizarPartido('${matchId}', '${ligaId}', '${local}', '${visita}', '${fechaInput}', '${estado}', '${scoreHome}', '${scoreAway}')">
-                        <div class="match-header">
-                            <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
-                            <span class="match-time">${displayTime}</span>
-                        </div>
-                        <div class="teams-row">
-                            <div class="team-name">${local}</div>
-                            <div class="vs-badge">VS</div>
-                            <div class="team-name right">${visita}</div>
+                    <div class="match-card" onclick="analizarPartido('${matchId}', '${ligaId}', '${local}', '${visita}', '${fechaInput}', '${estado}', '${scoreHome || 0}', '${scoreAway || 0}')">
+                        <div style="padding:15px; cursor:pointer;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-size:12px; color:#64748b;">${ligaInfo.nombre} ${extraBadge}</span>
+                                <span style="font-size:13px;">${displayTime}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-weight:bold; font-size:14px;">${local}</span>
+                                <span style="color:#94a3b8; font-size:12px;">vs</span>
+                                <span style="font-weight:bold; font-size:14px;">${visita}</span>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para el ${fechaInput}.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:40px 20px; color:#64748b;'>No hay partidos para esta fecha.<br>Selecciona otra fecha e intenta de nuevo.</p>`;
         }
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con la API.<br><br>${error.message}</p>`;
+        console.error('Error al cargar partidos:', error);
+        listaDiv.innerHTML = `<p style='color:#ef4444; text-align:center; padding:40px 20px;'>⚠️ No se pudo conectar con el servidor.<br>Comprueba tu conexión o intenta más tarde.</p>`;
     }
 }
 
-// Generador de variaciones para que no sea siempre idéntico
 function variar(val) {
-    let varianza = Math.floor(Math.random() * 11) - 5; // Entre -5 y +5
+    let varianza = Math.floor(Math.random() * 11) - 5;
     return Math.min(Math.max(val + varianza, 5), 98);
 }
 
-// Añadimos 'estado', 'scoreHome' y 'scoreAway' a los parámetros
 async function analizarPartido(matchId, ligaId, local, visita, fechaISO, estado, scoreHome, scoreAway) {
     const listaDiv = document.getElementById('lista-partidos');
+    if (!listaDiv) return;
+    
     const fechaStr = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
+    listaDiv.innerHTML = `<div style="text-align:center; padding:40px 20px;">🧠 Calculando análisis completo... ⏳</div>`;
 
-    // --- MOTOR LÓGICO MEJORADO ---
     const equiposGrandes = ["Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Liverpool", "Bayern", "Inter", "PSG", "AC Milan", "Juventus", "Atletico"];
     const equiposDefensivos = ["Getafe", "Cadiz", "Athletic", "Betis", "Sevilla", "Mallorca", "Rayo", "Elche", "Valencia"];
 
@@ -207,148 +228,41 @@ async function analizarPartido(matchId, ligaId, local, visita, fechaISO, estado,
     if (mejorOpcion.valor >= 75) { nivelConfianza = "ALTA"; colorConfianza = "#10b981"; }
     else if (mejorOpcion.valor < 55) { nivelConfianza = "BAJA"; colorConfianza = "#ef4444"; }
 
-    // --- NUEVO: CAJA DE ESTADO DEL PARTIDO ---
     let cajaEstado = "";
     if (estado === 'post' || estado === 'Final' || estado === 'Full Time') {
-        cajaEstado = `<div style="background: #e2e8f0; color: #333; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #cbd5e1;">
+        cajaEstado = `<div style="background: #e2e8f0; color: #333; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold;">
             🏁 Partido Finalizado: ${local} ${scoreHome} - ${scoreAway} ${visita}
         </div>`;
     } else if (estado === 'in') {
-        cajaEstado = `<div style="background: #d1fae5; color: #065f46; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #10b981;">
+        cajaEstado = `<div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold;">
             🔴 Partido en Juego: ${scoreHome} - ${scoreAway}
         </div>`;
     } else {
-        cajaEstado = `<div style="background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; border: 1px solid #f59e0b;">
+        cajaEstado = `<div style="background: #fef3c7; color: #92400e; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold;">
             ⏳ Partido Pendiente de Jugar
         </div>`;
     }
 
-    // --- RENDERIZADO HTML ---
     listaDiv.innerHTML = `
-        <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
-        <div class="match-card" style="padding: 20px 15px;">
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${local}</h3></div>
-                <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
-                <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
+        <button onclick="cargarPartidos()" style="background:#64748b; color:white; border:none; padding:10px 20px; border-radius:8px; margin-bottom:20px; cursor:pointer;">← Volver a partidos</button>
+        
+        <div style="background:#1e293b; border-radius:12px; padding:20px; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="text-align:center; width:30%;"><h3 style="font-size:16px; margin:0;">${local}</h3></div>
+                <div style="text-align:center; width:40%;"><span style="font-size:24px; font-weight:bold; color:#94a3b8;">VS</span></div>
+                <div style="text-align:center; width:30%;"><h3 style="font-size:16px; margin:0;">${visita}</h3></div>
             </div>
-            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px; text-transform: capitalize;">📅 ${fechaStr}</p>
+            <p style="text-align:center; color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:capitalize;">📅 ${fechaStr}</p>
             
-            <!-- CAJA DE ESTADO -->
             ${cajaEstado}
 
-            <div style="background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
+            <div style="background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center; border: 1px solid #f59e0b;">
                 <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">🤖 PICK IA (RESULTADO)</p>
-                <p style="color: ${color}; font-size: 16px; font-weight: 900;">${pick}</p>
+                <p style="color: ${color}; font-size: 18px; font-weight: 900;">${pick}</p>
+                <p style="color:${colorConfianza}; font-size:12px; margin-top:5px;">Confianza: ${nivelConfianza}</p>
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📊 Probabilidades 1X2</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad(`Victoria ${local}`, pL)}
-                ${crearBarraProbabilidad(`Empate`, pE)}
-                ${crearBarraProbabilidad(`Victoria ${visita}`, pV)}
-            </div>
-
-            <!-- GOLES -->
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles por Equipo</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+0.5", golesL[0])}
-                    ${crearBarraProbabilidad("+1.5", golesL[1])}
-                    ${crearBarraProbabilidad("+2.5", golesL[2])}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+0.5", golesV[0])}
-                    ${crearBarraProbabilidad("+1.5", golesV[1])}
-                    ${crearBarraProbabilidad("+2.5", golesV[2])}
-                </div>
-            </div>
-            <div class="duel-container">
-                ${crearBarraDuelo("+1.5 Goles", golesL[1], golesV[1])}
-            </div>
-
-            <!-- CÓRNERS -->
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners por Equipo</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+3.5", cornersL[0])}
-                    ${crearBarraProbabilidad("+4.5", cornersL[1])}
-                    ${crearBarraProbabilidad("+5.5", cornersL[2])}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+3.5", cornersV[0])}
-                    ${crearBarraProbabilidad("+4.5", cornersV[1])}
-                    ${crearBarraProbabilidad("+5.5", cornersV[2])}
-                </div>
-            </div>
-            <div class="duel-container">
-                ${crearBarraDuelo("+4.5 Córners", cornersL[1], cornersV[1])}
-            </div>
-
-            <!-- TARJETAS -->
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🟨 Tarjetas por Equipo</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+1.5", tarjetasL[0])}
-                    ${crearBarraProbabilidad("+2.5", tarjetasL[1])}
-                    ${crearBarraProbabilidad("+3.5", tarjetasL[2])}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+1.5", tarjetasV[0])}
-                    ${crearBarraProbabilidad("+2.5", tarjetasV[1])}
-                    ${crearBarraProbabilidad("+3.5", tarjetasV[2])}
-                </div>
-            </div>
-            <div class="duel-container">
-                ${crearBarraDuelo("+2.5 Tarjetas", tarjetasL[1], tarjetasV[1])}
-            </div>
-
-            <!-- TOTALES GLOBALES -->
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Totales del Partido</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
-                ${crearBarraProbabilidad("Ambos Equipos Marcan (NO)", 100 - bttsYes)}
-                <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 10px;"></div>
-                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", over25_global)}
-                ${crearBarraProbabilidad("Más de 8.5 Córners Totales", cornersOver85)}
-                ${crearBarraProbabilidad("Más de 3.5 Tarjetas Totales", cardsOver35)}
-            </div>
-
-            <!-- RECOMENDACIÓN FINAL -->
-            <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
-                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
-                    🏆 RECOMENDACIÓN FINAL IA
-                </h4>
-                <p style="color: #cbd5e1; font-size: 13px; text-align: center; margin-bottom: 15px;">
-                    Tras analizar todas las variables, la mejor opción es:
-                </p>
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
-                    <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
-                        ${mejorOpcion.nombre}
-                    </p>
-                    <p style="color: #10b981; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
-                        ${Math.round(mejorOpcion.valor)}% de probabilidad
-                    </p>
-                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid ${colorConfianza};">
-                        CONFIANZA: ${nivelConfianza}
-                    </span>
-                </div>
-            </div>
-
-        </div>
-    `;
-
-    // Activar animación de las barras
-    setTimeout(() => {
-        document.querySelectorAll('.duel-bar-left, .duel-bar-right').forEach(bar => {
-            bar.style.width = bar.getAttribute('data-width');
-        });
-    }, 100);
-}
+            <h4 style="margin-bottom: 10px; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 5px; font-size: 14px;">📊 Probabilidades 1X2</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                ${crearBarraProbabilidad(`Victoria ${
+            
