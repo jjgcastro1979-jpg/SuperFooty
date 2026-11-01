@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - VERSIÓN LIGERA Y ESTABLE
+// SUPERFOOTY PRO - CONEXIÓN CORREGIDA A GITHUB
 // ==========================================
 
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -50,11 +50,22 @@ async function cargarPartidos() {
 
     if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
 
+    // Diccionario para mapear el selector a los nombres exactos de los archivos en GitHub
+    const nombreArchivo = {
+        "esp.1": "es.1.json",
+        "eng.1": "en.1.json",
+        "ita.1": "it.1.json",
+        "ger.1": "de.1.json",
+        "fra.1": "fr.1.json"
+    };
+
+    const archivo = nombreArchivo[ligaId];
+
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos del ${fechaInput}... ⏳</div>`;
 
     try {
-        // Buscamos los partidos en el archivo de GitHub para 2026-27
-        const url = `https://raw.githubusercontent.com/openfootball/football.json/master/2026-27/${ligaId}.json`;
+        // URL al archivo JSON de la temporada 2026/27 con el nombre corregido
+        const url = `https://raw.githubusercontent.com/openfootball/football.json/master/2026-27/${archivo}`;
         const response = await fetch(url);
         
         if (!response.ok) throw new Error("Temporada no encontrada");
@@ -65,7 +76,6 @@ async function cargarPartidos() {
 
         if (partidosDelDia.length > 0) {
             listaDiv.innerHTML = partidosDelDia.map(m => {
-                const matchId = `${m.date}-${m.team1}-${m.team2}`;
                 const hora = m.time ? m.time.split(' ')[0] : '20:00';
                 return `
                     <div class="match-card" onclick="analizarPartido('${m.team1}', '${m.team2}', '${fechaInput}')">
@@ -82,10 +92,10 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para el ${fechaInput} (o el archivo de 2026-27 aún no se ha subido en GitHub).</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos programados para el ${fechaInput} en la temporada 2026/27.</p>`;
         }
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>La API de GitHub aún no tiene los datos de la temporada 2026-27, o no tienes conexión.</p>`;
+        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>La API de GitHub aún no tiene los datos de la temporada 2026-27 para esta liga, o no tienes conexión.</p>`;
     }
 }
 
