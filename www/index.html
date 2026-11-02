@@ -45,7 +45,7 @@
         
         .loader { text-align: center; font-weight: bold; color: var(--primary); padding: 30px; }
         
-        select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; background: white; font-size: 15px; font-weight: bold; color: var(--dark); }
+        select, input[type="date"] { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; background: white; font-size: 15px; font-weight: bold; color: var(--dark); }
 
         .duel-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
         .duel-stats { display: flex; flex-direction: column; width: 100%; gap: 5px; }
@@ -65,14 +65,15 @@
     <main id="inicio" class="page active">
         <div style="background: linear-gradient(135deg, var(--primary), #3b82f6); color: white; padding: 30px; border-radius: 20px; text-align: center; margin-bottom: 20px;">
             <h1 style="font-size: 28px; margin-bottom: 10px;">Bienvenido a SuperFooty</h1>
-            <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Partidos en vivo y análisis con IA.</p>
-            <button class="btn" onclick="showPage('partidos')" style="background:white; color:var(--primary); box-shadow:none;">Ver Partidos de Hoy</button>
+            <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Analiza y predice los partidos con Inteligencia Artificial.</p>
+            <button class="btn" onclick="showPage('partidos')" style="background:white; color:var(--primary); box-shadow:none;">Empezar a Analizar</button>
         </div>
     </main>
 
     <main id="partidos" class="page">
-        <h2>Partidos de Hoy</h2>
+        <h2>Partidos y Análisis</h2>
         
+        <!-- SOLO LIGAS REGULARES, SIN MUNDIAL -->
         <select id="league-select">
             <option value="esp.1">La Liga (España)</option>
             <option value="eng.1">Premier League (Inglaterra)</option>
@@ -81,8 +82,10 @@
             <option value="fra.1">Ligue 1 (Francia)</option>
         </select>
 
+        <input type="date" id="date-select">
+
         <div id="lista-partidos">
-            <div class="loader">Pulsa Generar para ver los partidos de hoy...</div>
+            <div class="loader">Elige una fecha y pulsa Generar...</div>
         </div>
         
         <br>
@@ -112,6 +115,14 @@
             document.querySelectorAll('nav a').forEach(nav => nav.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.getElementById('nav-' + pageId).classList.add('active');
+            
+            if(pageId === 'partidos' && document.getElementById('lista-partidos').innerHTML.includes('Elige una fecha')) {
+                let hoy = new Date();
+                let year = hoy.getFullYear();
+                let month = String(hoy.getMonth() + 1).padStart(2, '0');
+                let day = String(hoy.getDate()).padStart(2, '0');
+                document.getElementById('date-select').value = `${year}-${month}-${day}`;
+            }
         }
     </script>
 </body>
