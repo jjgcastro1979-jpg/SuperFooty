@@ -2,7 +2,7 @@
 // SUPERFOOTY PRO - CONECTADO A TU PUENTE CLOUDFLARE
 // ==========================================
 
-// ⚠️ AQUÍ ESTÁ TU PUENTE REAL
+// ⚠️ AQUÍ ESTÁ TU PUENTE REAL (Revisa que el 1979 sea correcto)
 const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
 
 const ligasFootballData = {
@@ -79,11 +79,11 @@ async function cargarPartidos() {
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales en la API... ⏳</div>`;
 
     try {
+        // Tu código original busca partidos programados (SCHEDULED)
         const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?status=SCHEDULED`;
         const response = await fetch(url);
         
         // --- ESCUDO DE SEGURIDAD ---
-        // Leemos la respuesta como texto primero para evitar el error de JSON
         const textoRespuesta = await response.text();
 
         if (textoRespuesta.includes("Hola, este") || textoRespuesta.includes("Hello World")) {
@@ -91,10 +91,12 @@ async function cargarPartidos() {
         }
 
         if (!response.ok) {
+            if (response.status === 429 || response.status === 403) {
+                throw new Error("Límite de peticiones de la API alcanzado (10 por minuto). Espera un poco e intenta de nuevo.");
+            }
             throw new Error(`Error HTTP: ${response.status} - Asegúrate de que tu clave API esté bien configurada en Cloudflare.`);
         }
 
-        // Si pasó el escudo, convertimos a JSON de forma segura
         const data = JSON.parse(textoRespuesta);
         const partidos = data.matches || [];
 
@@ -107,8 +109,12 @@ async function cargarPartidos() {
                 const fechaReal = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                 const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 
+                // Escapamos las comillas simples en los nombres para evitar errores en el onclick
+                const safeLocal = local.replace(/'/g, "\\'");
+                const safeVisita = visita.replace(/'/g, "\\'");
+
                 return `
-                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaReal}')">
+                    <div class="match-card" onclick="analizarPartido('${safeLocal}', '${safeVisita}', '${fechaReal}')">
                         <div class="match-header">
                             <span class="league-badge">${ligaInfo.nombre}</span>
                             <span class="match-time">📅 ${fechaReal} - ⏰ ${hora}</span>
@@ -206,7 +212,7 @@ function analizarPartido(local, visita, fechaISO) {
     let colorConfianza = nivelConfianza === "ALTA" ? "#10b981" : (nivelConfianza === "MEDIA" ? "#f59e0b" : "#ef4444");
 
     listaDiv.innerHTML = `
-        <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
+        <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver a Partidos</button>
         <div class="match-card" style="padding: 20px 15px;">
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
@@ -303,9 +309,4 @@ function analizarPartido(local, visita, fechaISO) {
 
         </div>
     `;
-}
-
-
-
-
- En archivo app.jss tengo esto 
+        }
