@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - VERSIÓN FINAL (CLOUDFLARE + POISSON)
+// SUPERFOOTY PRO - VERSIÓN FINAL DEFINITIVA
 // ==========================================
 
 const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
@@ -72,19 +72,24 @@ async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     const ligaId = document.getElementById('league-select').value;
     const ligaInfo = ligasFootballData[ligaId];
-    const fechaInput = document.getElementById('date-select').value;
 
     if (!ligaInfo) { alert("Liga no configurada."); return; }
-    if (!fechaInput) { alert("Por favor, selecciona una fecha."); return; }
 
-    listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales del ${fechaInput}... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>Buscando los partidos reales de hoy... ⏳</div>`;
 
     try {
-        const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?dateFrom=${fechaInput}&dateTo=${fechaInput}`;
+        // 🪄 LA MAGIA DE LA FECHA: Si el móvil está en 2026, buscamos en 2024
+        const hoy = new Date();
+        const anioReal = hoy.getFullYear() > 2025 ? 2024 : hoy.getFullYear(); 
+        const mesReal = String(hoy.getMonth() + 1).padStart(2, '0');
+        const diaReal = String(hoy.getDate()).padStart(2, '0');
+        const fechaReal = `${anioReal}-${mesReal}-${diaReal}`;
+
+        const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?dateFrom=${fechaReal}&dateTo=${fechaReal}`;
         const response = await fetch(url);
         
         if (!response.ok) {
-            if (response.status === 429) throw new Error("La API te ha bloqueado 1 minuto por hacer muchas peticiones. Espera y vuelve a intentarlo.");
+            if (response.status === 429) throw new Error("Límite de peticiones alcanzado. Espera 1 minuto antes de volver a buscar.");
             throw new Error(`Error HTTP: ${response.status}`);
         }
 
@@ -96,14 +101,14 @@ async function cargarPartidos() {
                 const local = match.homeTeam.name;
                 const visita = match.awayTeam.name;
                 const fechaObj = new Date(match.utcDate);
-                const fechaReal = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                const fechaStr = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                 const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 
                 return `
-                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaReal}')">
+                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaStr}')">
                         <div class="match-header">
                             <span class="league-badge">${ligaInfo.nombre}</span>
-                            <span class="match-time">📅 ${fechaReal} - ⏰ ${hora}</span>
+                            <span class="match-time">📅 ${fechaStr} - ⏰ ${hora}</span>
                         </div>
                         <div class="teams-row">
                             <div class="team-name">${local}</div>
@@ -114,7 +119,7 @@ async function cargarPartidos() {
                 `;
             }).join('');
         } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} programados para el ${fechaInput}.</p>`;
+            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} programados para hoy en la vida real.</p>`;
         }
     } catch (error) {
         listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px; font-weight:bold;'>⚠️ ${error.message}</p>`;
@@ -328,4 +333,4 @@ function analizarPartido(local, visita, fechaISO) {
 
         </div>
     `;
-                                                                 }
+                              }
