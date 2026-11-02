@@ -1,8 +1,8 @@
 // ==========================================
-// SUPERFOOTY PRO - VERSIÓN BLINDADA
+// SUPERFOOTY PRO - ARCHIVO COMPLETO Y BLINDADO
 // ==========================================
 
-// ⚠️ AQUÍ ESTÁ TU PUENTE REAL (Revisa que esté perfecto)
+// ⚠️ AQUÍ ESTÁ TU PUENTE REAL
 const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
 
 const ligasFootballData = {
@@ -13,6 +13,7 @@ const ligasFootballData = {
     "fra.1": { nombre: "Ligue 1", slug: "FL1" }
 };
 
+// Base de datos de fuerzas para el motor matemático
 const equiposData = {
     "Real Madrid": { atk: 2.1, def: 0.8 }, "Barcelona": { atk: 2.0, def: 1.0 },
     "Atletico": { atk: 1.6, def: 0.7 }, "Athletic": { atk: 1.4, def: 0.9 },
@@ -29,6 +30,7 @@ const equiposData = {
 
 const defaultTeam = { atk: 1.2, def: 1.2 };
 
+// --- FUNCIONES MATEMÁTICAS ---
 function factorial(n) {
     if (n === 0 || n === 1) return 1;
     let result = 1;
@@ -52,6 +54,7 @@ function getOverProb(line, lambda) {
     return (1 - poissonCDF(Math.floor(line), lambda)) * 100;
 }
 
+// --- FUNCIONES DE DISEÑO HTML ---
 function crearBarraProbabilidad(titulo, probabilidad) {
     let prob = parseFloat(probabilidad) || 0;
     let color = "#ef4444"; 
@@ -105,12 +108,16 @@ function generarTablaEstadisticas(lambdaL, lambdaV, maxLine) {
     }
 }
 
+// --- FUNCIÓN PRINCIPAL DE CARGA ---
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     const ligaId = document.getElementById('league-select').value;
     const ligaInfo = ligasFootballData[ligaId];
 
-    if (!ligaInfo) { alert("Liga no configurada."); return; }
+    if (!ligaInfo) { 
+        alert("Liga no configurada."); 
+        return; 
+    }
 
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales en la API... ⏳</div>`;
 
@@ -127,7 +134,7 @@ async function cargarPartidos() {
             if (response.status === 429 || response.status === 403) {
                 throw new Error("Límite de la API alcanzado (espera 1 minuto).");
             }
-            throw new Error(`Error HTTP: ${response.status}`);
+            throw new Error(`Error HTTP: ${response.status} - Revisa tu Worker.`);
         }
 
         const data = JSON.parse(textoRespuesta);
@@ -135,7 +142,6 @@ async function cargarPartidos() {
 
         if (partidos.length > 0) {
             listaDiv.innerHTML = partidos.slice(0, 10).map(match => {
-                // PROTECCIÓN: Si el nombre viene vacío, usamos "Local" o "Visitante"
                 const local = match.homeTeam.name || match.homeTeam.shortName || "Equipo Local";
                 const visita = match.awayTeam.name || match.awayTeam.shortName || "Equipo Visitante";
                 
@@ -143,7 +149,6 @@ async function cargarPartidos() {
                 const fechaReal = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                 const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 
-                // Protegemos las comillas para que el onclick no falle
                 const safeLocal = local.replace(/'/g, "\\'");
                 const safeVisita = visita.replace(/'/g, "\\'");
 
@@ -169,11 +174,13 @@ async function cargarPartidos() {
             <div style='background: #fee2e2; border: 1px solid #ef4444; padding: 15px; border-radius: 8px; color: #b91c1c;'>
                 <h4 style="margin-top:0;">Error al cargar</h4>
                 <p style="font-size: 13px;">${error.message}</p>
+                <p style="font-size: 11px; margin-bottom:0;">Comprueba tu conexión o el estado de Cloudflare.</p>
             </div>
         `;
     }
 }
 
+// --- FUNCIÓN DE ANÁLISIS ---
 function analizarPartido(local, visita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis... ⏳</div>`;
@@ -349,4 +356,4 @@ function analizarPartido(local, visita, fechaISO) {
                     ${tablaCards}
                 </div>
 
-                <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px r
+              
