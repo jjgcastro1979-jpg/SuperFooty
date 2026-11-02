@@ -79,23 +79,30 @@ async function cargarPartidos() {
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales en la API... ⏳</div>`;
 
     try {
-        // Usamos tu puente de Cloudflare para evitar bloqueos
-        // Pedimos los próximos partidos programados de la liga
         const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?status=SCHEDULED`;
         const response = await fetch(url);
         
-        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-        
-        const data = await response.json();
+        // --- ESCUDO DE SEGURIDAD ---
+        // Leemos la respuesta como texto primero para evitar el error de JSON
+        const textoRespuesta = await response.text();
+
+        if (textoRespuesta.includes("Hola, este") || textoRespuesta.includes("Hello World")) {
+            throw new Error("El Worker de Cloudflare todavía tiene el código por defecto. Debes ir a Cloudflare y pegar el código correcto.");
+        }
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status} - Asegúrate de que tu clave API esté bien configurada en Cloudflare.`);
+        }
+
+        // Si pasó el escudo, convertimos a JSON de forma segura
+        const data = JSON.parse(textoRespuesta);
         const partidos = data.matches || [];
 
         if (partidos.length > 0) {
-            // Mostramos los próximos 10 partidos
             listaDiv.innerHTML = partidos.slice(0, 10).map(match => {
                 const local = match.homeTeam.name;
                 const visita = match.awayTeam.name;
                 
-                // Formateamos la fecha real
                 const fechaObj = new Date(match.utcDate);
                 const fechaReal = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                 const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -118,7 +125,13 @@ async function cargarPartidos() {
             listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay próximos partidos programados para ${ligaInfo.nombre} en la API.</p>`;
         }
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con tu puente de Cloudflare.<br><br>${error.message}</p>`;
+        listaDiv.innerHTML = `
+            <div style='background: #fee2e2; border: 1px solid #ef4444; padding: 15px; border-radius: 8px; color: #b91c1c;'>
+                <h4 style="margin-top:0;">Error de conexión</h4>
+                <p style="font-size: 13px;">${error.message}</p>
+                <p style="font-size: 11px; margin-bottom:0;"><strong>Pista:</strong> Revisa que en Cloudflare hayas borrado el "Hola mundo" y hayas puesto el código puente correcto.</p>
+            </div>
+        `;
     }
 }
 
@@ -290,4 +303,4 @@ function analizarPartido(local, visita, fechaISO) {
 
         </div>
     `;
-               }
+}
