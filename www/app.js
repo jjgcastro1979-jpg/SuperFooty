@@ -2,7 +2,7 @@
 // SUPERFOOTY PRO - CONECTADO A TU PUENTE CLOUDFLARE
 // ==========================================
 
-// ⚠️ AQUÍ ESTÁ TU PUENTE REAL (Revisa que el 1979 sea correcto)
+// ⚠️ AQUÍ ESTÁ TU PUENTE REAL
 const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
 
 const ligasFootballData = {
@@ -39,6 +39,7 @@ const equiposData = {
 
 const defaultTeam = { atk: 1.2, def: 1.2 };
 
+// --- FUNCIONES MATEMÁTICAS ---
 function factorial(n) {
     if (n === 0 || n === 1) return 1;
     let result = 1;
@@ -48,6 +49,19 @@ function factorial(n) {
 
 function poisson(k, lambda) {
     return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
+}
+
+function poissonCDF(k, lambda) {
+    let sum = 0;
+    for(let i=0; i<=Math.floor(k); i++) {
+        sum += poisson(i, lambda);
+    }
+    return sum;
+}
+
+// Probabilidad de que ocurra MÁS de una línea (ej. si la línea es 4.5, calcula P(X >= 5))
+function getOverProb(line, lambda) {
+    return (1 - poissonCDF(Math.floor(line), lambda)) * 100;
 }
 
 function crearBarraProbabilidad(titulo, probabilidad) {
@@ -68,6 +82,39 @@ function crearBarraProbabilidad(titulo, probabilidad) {
         </div>
     `;
 }
+
+// Genera la tabla HTML para Córners y Tarjetas
+function generarTablaEstadisticas(lambdaL, lambdaV, maxLine) {
+    let lambdaT = lambdaL + lambdaV;
+    let html = `<table style="width:100%; border-collapse: collapse; font-size: 11px; text-align: center; margin-bottom: 10px;">
+        <tr style="background:#e2e8f0; color:#334155;">
+            <th style="padding:6px; border:1px solid #cbd5e1;">Línea</th>
+            <th style="padding:6px; border:1px solid #cbd5e1;">Local</th>
+            <th style="padding:6px; border:1px solid #cbd5e1;">Total</th>
+            <th style="padding:6px; border:1px solid #cbd5e1;">Visitante</th>
+        </tr>`;
+    
+    for (let line = 1.5; line <= maxLine; line += 1) {
+        let probL = getOverProb(line, lambdaL);
+        let probV = getOverProb(line, lambdaV);
+        let probT = getOverProb(line, lambdaT);
+        
+        let getColor = (p) => p >= 65 ? '#10b981' : (p >= 40 ? '#f59e0b' : '#ef4444');
+        
+        // Solo mostramos las líneas donde la probabilidad no sea 0% para no hacer la tabla infinita
+        if (probT > 0.5) {
+            html += `<tr>
+                <td style="padding:4px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">+${line}</td>
+                <td style="padding:4px; border:1px solid #cbd5e1; color:${getColor(probL)}; font-weight:bold;">${Math.round(probL)}%</td>
+                <td style="padding:4px; border:1px solid #cbd5e1; color:${getColor(probT)}; font-weight:bold; background:#f8fafc;">${Math.round(probT)}%</td>
+                <td style="padding:4px; border:1px solid #cbd5e1; color:${getColor(probV)}; font-weight:bold;">${Math.round(probV)}%</td>
+            </tr>`;
+        }
+    }
+    html += `</table>`;
+    return html;
+}
+
 
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
@@ -151,7 +198,7 @@ function analizarPartido(local, visita, fechaISO) {
         if (visita.includes(key)) dataV = equiposData[key];
     }
 
-    // --- CÁLCULO MATEMÁTICO (POISSON) ---
+    // --- CÁLCULO MATEMÁTICO (POISSON GOLES) ---
     const xgL = dataL.atk * dataV.def * 1.2; 
     const xgV = dataV.atk * dataL.def;
 
@@ -174,21 +221,16 @@ function analizarPartido(local, visita, fechaISO) {
     probWinL = probWinL * 100; probWinV = probWinV * 100; probDraw = probDraw * 100;
     probOver15 = probOver15 * 100; probOver25 = probOver25 * 100;
 
-    // --- NUEVOS CÁLCULOS DE CÓRNERS Y TARJETAS (Más realistas) ---
-    let cornersL = Math.min(Math.round(60 + (dataL.atk * 10) - (dataV.def * 5)), 95);
-    let cornersV = Math.min(Math.round(60 + (dataV.atk * 10) - (dataL.def * 5)), 95);
-    let tarjetasL = Math.min(Math.round(65 + (dataV.atk * 5) - (dataL.def * 5)), 95);
-    let tarjetasV = Math.min(Math.round(65 + (dataL.atk * 5) - (dataV.def * 5)), 95);
+    // --- CÁLCULO LAMBDAS PARA CÓRNERS Y TARJETAS ---
+    // Estimamos el número medio (lambda) de córners y tarjetas basándonos en el ataque y defensa
+    let lambdaCornersL = Math.max(2.5, (dataL.atk * 3) - (dataV.def * 0.5) + 2);
+    let lambdaCornersV = Math.max(2.5, (dataV.atk * 3) - (dataL.def * 0.5) + 2);
+    
+    let lambdaCardsL = Math.max(1.5, (dataV.atk * 1.5) - (dataL.def * 0.5) + 1);
+    let lambdaCardsV = Math.max(1.5, (dataL.atk * 1.5) - (dataV.def * 0.5) + 1);
 
-    let probTotalCorners = Math.min(Math.round((cornersL + cornersV) / 2), 95);
-    let probTotalTarjetas = Math.min(Math.round((tarjetasL + tarjetasV) / 2), 95);
-
-    // --- NUEVAS OPCIONES COMBINADAS ---
-    let comb1X = Math.min(probWinL + probDraw, 98);
-    let combX2 = Math.min(probWinV + probDraw, 98);
-    let combLocalOver15 = (probWinL * probOver15) / 100;
-    let combVisitaOver15 = (probWinV * probOver15) / 100;
-    let combBTTS_Over25 = (bttsYes * probOver25) / 100;
+    let lambdaCornersT = lambdaCornersL + lambdaCornersV;
+    let lambdaCardsT = lambdaCardsL + lambdaCardsV;
 
     // --- SIMULACIÓN DE TEMPORADA Y H2H ---
     const pj = 14; 
@@ -210,7 +252,14 @@ function analizarPartido(local, visita, fechaISO) {
         textoAnalisis = `Partido muy táctico y cerrado. Tanto ${local} como ${visita} priorizan el orden defensivo. El historial reciente muestra tendencia a marcadores cortos.`;
     }
 
-    // --- 🏆 NUEVO MOTOR DE RECOMENDACIÓN FINAL ---
+    // --- OPCIONES COMBINADAS ---
+    let comb1X = Math.min(probWinL + probDraw, 98);
+    let combX2 = Math.min(probWinV + probDraw, 98);
+    let combLocalOver15 = (probWinL * probOver15) / 100;
+    let combVisitaOver15 = (probWinV * probOver15) / 100;
+    let combBTTS_Over25 = (bttsYes * probOver25) / 100;
+
+    // --- 🏆 MOTOR DE RECOMENDACIÓN FINAL ---
     let todasLasOpciones = [
         { nombre: `Victoria ${local}`, valor: probWinL },
         { nombre: `Empate`, valor: probDraw },
@@ -218,10 +267,6 @@ function analizarPartido(local, visita, fechaISO) {
         { nombre: `Más de 1.5 Goles`, valor: probOver15 },
         { nombre: `Más de 2.5 Goles`, valor: probOver25 },
         { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes },
-        { nombre: `+4.5 Córners ${local}`, valor: cornersL },
-        { nombre: `+4.5 Córners ${visita}`, valor: cornersV },
-        { nombre: `Más de 8.5 Córners Totales`, valor: probTotalCorners },
-        { nombre: `Más de 3.5 Tarjetas Totales`, valor: probTotalTarjetas },
         { nombre: `Combinada: ${local} o Empate (1X)`, valor: comb1X },
         { nombre: `Combinada: ${visita} o Empate (X2)`, valor: combX2 },
         { nombre: `Combinada: Gana ${local} + Más de 1.5 Goles`, valor: combLocalOver15 },
@@ -229,11 +274,37 @@ function analizarPartido(local, visita, fechaISO) {
         { nombre: `Combinada: Ambos Marcan + Más de 2.5 Goles`, valor: combBTTS_Over25 }
     ];
 
+    // Buscamos la mejor línea de córners y tarjetas para añadirla a las opciones
+    let mejorCornerLine = 0, mejorCornerProb = 0;
+    for(let l=1.5; l<=13.5; l+=1) {
+        let p = getOverProb(l, lambdaCornersT);
+        if(p >= 50 && p > mejorCornerProb) {
+            mejorCornerProb = p;
+            mejorCornerLine = l;
+        }
+    }
+    if(mejorCornerLine > 0) todasLasOpciones.push({ nombre: `Más de ${mejorCornerLine} Córners Totales`, valor: mejorCornerProb });
+
+    let mejorCardLine = 0, mejorCardProb = 0;
+    for(let l=1.5; l<=13.5; l+=1) {
+        let p = getOverProb(l, lambdaCardsT);
+        if(p >= 50 && p > mejorCardProb) {
+            mejorCardProb = p;
+            mejorCardLine = l;
+        }
+    }
+    if(mejorCardLine > 0) todasLasOpciones.push({ nombre: `Más de ${mejorCardLine} Tarjetas Totales`, valor: mejorCardProb });
+
+    // Filtramos las opciones que superen el 50% y ordenamos de mayor a menor
     let opcionesValidas = todasLasOpciones.filter(op => op.valor >= 50).sort((a, b) => b.valor - a.valor);
     let mejorOpcion = opcionesValidas.length > 0 ? opcionesValidas[0] : todasLasOpciones.sort((a, b) => b.valor - a.valor)[0];
 
     let nivelConfianza = mejorOpcion.valor >= 75 ? "ALTA" : (mejorOpcion.valor >= 60 ? "MEDIA" : "BAJA");
     let colorConfianza = nivelConfianza === "ALTA" ? "#10b981" : (nivelConfianza === "MEDIA" ? "#f59e0b" : "#ef4444");
+
+    // Generamos las tablas HTML
+    let tablaCorners = generarTablaEstadisticas(lambdaCornersL, lambdaCornersV, 13.5);
+    let tablaCards = generarTablaEstadisticas(lambdaCardsL, lambdaCardsV, 8.5); // Las tarjetas rara vez pasan de 8.5
 
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver a Partidos</button>
@@ -292,20 +363,6 @@ function analizarPartido(local, visita, fechaISO) {
                 ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners y 🟨 Tarjetas (Individual)</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+4.5 Córners", cornersL)}
-                    ${crearBarraProbabilidad("+2.5 Tarjetas", tarjetasL)}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+4.5 Córners", cornersV)}
-                    ${crearBarraProbabilidad("+2.5 Tarjetas", tarjetasV)}
-                </div>
-            </div>
-
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🔗 Opciones Combinadas</h4>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
                 ${crearBarraProbabilidad(`${local} o Empate (1X)`, comb1X)}
@@ -315,26 +372,5 @@ function analizarPartido(local, visita, fechaISO) {
                 ${crearBarraProbabilidad(`Ambos Marcan + Más de 2.5 Goles`, combBTTS_Over25)}
             </div>
 
-            <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
-                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
-                    🏆 RECOMENDACIÓN FINAL GLOBAL
-                </h4>
-                <p style="color: #cbd5e1; font-size: 12px; text-align: center; margin-bottom: 15px;">
-                    Evaluando todas las opciones (goles, córners, tarjetas y combinadas), la mejor apuesta es:
-                </p>
-                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-                    <p style="color: white; font-size: 16px; font-weight: 900; margin-bottom: 8px; line-height: 1.3;">
-                        ${mejorOpcion.nombre}
-                    </p>
-                    <p style="color: #10b981; font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-                        ${Math.round(mejorOpcion.valor)}% de probabilidad
-                    </p>
-                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid ${colorConfianza};">
-                        CONFIANZA: ${nivelConfianza}
-                    </span>
-                </div>
-            </div>
-
-        </div>
-    `;
-        }
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners (Líneas 1.5 a 13.5)</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius
