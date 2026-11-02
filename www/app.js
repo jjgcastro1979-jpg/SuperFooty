@@ -79,11 +79,9 @@ async function cargarPartidos() {
     listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales en la API... ⏳</div>`;
 
     try {
-        // Tu código original busca partidos programados (SCHEDULED)
         const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?status=SCHEDULED`;
         const response = await fetch(url);
         
-        // --- ESCUDO DE SEGURIDAD ---
         const textoRespuesta = await response.text();
 
         if (textoRespuesta.includes("Hola, este") || textoRespuesta.includes("Hello World")) {
@@ -109,7 +107,6 @@ async function cargarPartidos() {
                 const fechaReal = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                 const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 
-                // Escapamos las comillas simples en los nombres para evitar errores en el onclick
                 const safeLocal = local.replace(/'/g, "\\'");
                 const safeVisita = visita.replace(/'/g, "\\'");
 
@@ -145,7 +142,7 @@ function analizarPartido(local, visita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis matemático... ⏳</div>`;
 
-    // --- BUSCAMOS LAS FUERZAS REALES (con coincidencia parcial de nombres) ---
+    // --- BUSCAMOS LAS FUERZAS REALES ---
     let dataL = defaultTeam;
     let dataV = defaultTeam;
     
@@ -177,10 +174,21 @@ function analizarPartido(local, visita, fechaISO) {
     probWinL = probWinL * 100; probWinV = probWinV * 100; probDraw = probDraw * 100;
     probOver15 = probOver15 * 100; probOver25 = probOver25 * 100;
 
-    let cornersL = Math.min(probOver15 + 10, 95);
-    let cornersV = Math.min(probOver15 + 5, 95);
-    let tarjetasL = Math.min(probOver25 + 20, 95);
-    let tarjetasV = Math.min(probOver25 + 15, 95);
+    // --- NUEVOS CÁLCULOS DE CÓRNERS Y TARJETAS (Más realistas) ---
+    let cornersL = Math.min(Math.round(60 + (dataL.atk * 10) - (dataV.def * 5)), 95);
+    let cornersV = Math.min(Math.round(60 + (dataV.atk * 10) - (dataL.def * 5)), 95);
+    let tarjetasL = Math.min(Math.round(65 + (dataV.atk * 5) - (dataL.def * 5)), 95);
+    let tarjetasV = Math.min(Math.round(65 + (dataL.atk * 5) - (dataV.def * 5)), 95);
+
+    let probTotalCorners = Math.min(Math.round((cornersL + cornersV) / 2), 95);
+    let probTotalTarjetas = Math.min(Math.round((tarjetasL + tarjetasV) / 2), 95);
+
+    // --- NUEVAS OPCIONES COMBINADAS ---
+    let comb1X = Math.min(probWinL + probDraw, 98);
+    let combX2 = Math.min(probWinV + probDraw, 98);
+    let combLocalOver15 = (probWinL * probOver15) / 100;
+    let combVisitaOver15 = (probWinV * probOver15) / 100;
+    let combBTTS_Over25 = (bttsYes * probOver25) / 100;
 
     // --- SIMULACIÓN DE TEMPORADA Y H2H ---
     const pj = 14; 
@@ -193,32 +201,48 @@ function analizarPartido(local, visita, fechaISO) {
     // --- TEXTO TÁCTICO ---
     let textoAnalisis = "";
     if (probWinL > 60) {
-        textoAnalisis = `El modelo otorga una clara ventaja a ${local}. Su alta capacidad ofensiva (xG de ${xgL.toFixed(2)}) sugiere que dominará el partido. Con ${winL} victorias, llega en un gran momento.`;
+        textoAnalisis = `El modelo otorga una clara ventaja a ${local}. Su alta capacidad ofensiva (xG de ${xgL.toFixed(2)}) sugiere que dominará el partido y generará peligro constante.`;
     } else if (probWinV > 60) {
-        textoAnalisis = `A pesar de jugar fuera, ${visita} es el claro favorito. Con un xG de ${xgV.toFixed(2)} y ${winV} victorias, su ataque debería superar la resistencia de ${local}.`;
+        textoAnalisis = `A pesar de jugar fuera, ${visita} es el claro favorito. Con un xG de ${xgV.toFixed(2)}, su ataque debería superar la resistencia de ${local}.`;
     } else if (bttsYes > 60) {
-        textoAnalisis = `Se espera un partido abierto. Ambos equipos tienen alta probabilidad de anotar (${Math.round(bttsYes)}%). Sus enfrentamientos directos han sido muy disputados.`;
+        textoAnalisis = `Se espera un partido abierto. Ambos equipos tienen alta probabilidad de anotar (${Math.round(bttsYes)}%). Los espacios en defensa serán clave.`;
     } else {
         textoAnalisis = `Partido muy táctico y cerrado. Tanto ${local} como ${visita} priorizan el orden defensivo. El historial reciente muestra tendencia a marcadores cortos.`;
     }
 
-    let mejorOpcion = { nombre: "Empate", valor: probDraw };
-    if (probWinL > mejorOpcion.valor) mejorOpcion = { nombre: `Victoria ${local}`, valor: probWinL };
-    if (probWinV > mejorOpcion.valor) mejorOpcion = { nombre: `Victoria ${visita}`, valor: probWinV };
-    if (probOver25 > mejorOpcion.valor) mejorOpcion = { nombre: `Más de 2.5 Goles`, valor: probOver25 };
-    if (bttsYes > mejorOpcion.valor) mejorOpcion = { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes };
+    // --- 🏆 NUEVO MOTOR DE RECOMENDACIÓN FINAL ---
+    let todasLasOpciones = [
+        { nombre: `Victoria ${local}`, valor: probWinL },
+        { nombre: `Empate`, valor: probDraw },
+        { nombre: `Victoria ${visita}`, valor: probWinV },
+        { nombre: `Más de 1.5 Goles`, valor: probOver15 },
+        { nombre: `Más de 2.5 Goles`, valor: probOver25 },
+        { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes },
+        { nombre: `+4.5 Córners ${local}`, valor: cornersL },
+        { nombre: `+4.5 Córners ${visita}`, valor: cornersV },
+        { nombre: `Más de 8.5 Córners Totales`, valor: probTotalCorners },
+        { nombre: `Más de 3.5 Tarjetas Totales`, valor: probTotalTarjetas },
+        { nombre: `Combinada: ${local} o Empate (1X)`, valor: comb1X },
+        { nombre: `Combinada: ${visita} o Empate (X2)`, valor: combX2 },
+        { nombre: `Combinada: Gana ${local} + Más de 1.5 Goles`, valor: combLocalOver15 },
+        { nombre: `Combinada: Gana ${visita} + Más de 1.5 Goles`, valor: combVisitaOver15 },
+        { nombre: `Combinada: Ambos Marcan + Más de 2.5 Goles`, valor: combBTTS_Over25 }
+    ];
 
-    let nivelConfianza = mejorOpcion.valor >= 70 ? "ALTA" : (mejorOpcion.valor >= 50 ? "MEDIA" : "BAJA");
+    let opcionesValidas = todasLasOpciones.filter(op => op.valor >= 50).sort((a, b) => b.valor - a.valor);
+    let mejorOpcion = opcionesValidas.length > 0 ? opcionesValidas[0] : todasLasOpciones.sort((a, b) => b.valor - a.valor)[0];
+
+    let nivelConfianza = mejorOpcion.valor >= 75 ? "ALTA" : (mejorOpcion.valor >= 60 ? "MEDIA" : "BAJA");
     let colorConfianza = nivelConfianza === "ALTA" ? "#10b981" : (nivelConfianza === "MEDIA" ? "#f59e0b" : "#ef4444");
 
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver a Partidos</button>
         <div class="match-card" style="padding: 20px 15px;">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${local}</h3></div>
-                <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
-                <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                <div style="text-align: center; width: 42%;"><h3 style="font-size: 15px; margin: 0; line-height: 1.2;">${local}</h3></div>
+                <div style="text-align: center; width: 16%; display: flex; align-items: center; justify-content: center;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
+                <div style="text-align: center; width: 42%;"><h3 style="font-size: 15px; margin: 0; line-height: 1.2;">${visita}</h3></div>
             </div>
             <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px;">📅 ${fechaISO}</p>
             
@@ -242,7 +266,7 @@ function analizarPartido(local, visita, fechaISO) {
                 </div>
                 <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
                     <p style="font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 5px;">Últimos enfrentamientos:</p>
-                    <div style="display: flex; justify-content: space-around; font-size: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; align-items: center;">
                         <span style="color: #10b981;">${local}: ${h2hL} Victorias</span>
                         <span style="color: #f59e0b;">Empates: ${h2hE}</span>
                         <span style="color: #ef4444;">${visita}: ${h2hV} Victorias</span>
@@ -261,20 +285,15 @@ function analizarPartido(local, visita, fechaISO) {
                 ${crearBarraProbabilidad(`Victoria ${visita}`, probWinV)}
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🤝 Ambos Equipos Marcan</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("SÍ (Ambos anotan)", bttsYes)}
-                ${crearBarraProbabilidad("NO (Alguien deja la portería a cero)", 100 - bttsYes)}
-            </div>
-
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Probabilidad de Goles</h4>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles</h4>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
                 ${crearBarraProbabilidad("Más de 1.5 Goles Totales", probOver15)}
                 ${crearBarraProbabilidad("Más de 2.5 Goles Totales", probOver25)}
+                ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners y 🟨 Tarjetas</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners y 🟨 Tarjetas (Individual)</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
                     ${crearBarraProbabilidad("+4.5 Córners", cornersL)}
@@ -287,21 +306,30 @@ function analizarPartido(local, visita, fechaISO) {
                 </div>
             </div>
 
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🔗 Opciones Combinadas</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                ${crearBarraProbabilidad(`${local} o Empate (1X)`, comb1X)}
+                ${crearBarraProbabilidad(`${visita} o Empate (X2)`, combX2)}
+                ${crearBarraProbabilidad(`Gana ${local} + Más de 1.5 Goles`, combLocalOver15)}
+                ${crearBarraProbabilidad(`Gana ${visita} + Más de 1.5 Goles`, combVisitaOver15)}
+                ${crearBarraProbabilidad(`Ambos Marcan + Más de 2.5 Goles`, combBTTS_Over25)}
+            </div>
+
             <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
                 <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
-                    🏆 RECOMENDACIÓN FINAL
+                    🏆 RECOMENDACIÓN FINAL GLOBAL
                 </h4>
-                <p style="color: #cbd5e1; font-size: 13px; text-align: center; margin-bottom: 15px;">
-                    La opción con mayor probabilidad estadística es:
+                <p style="color: #cbd5e1; font-size: 12px; text-align: center; margin-bottom: 15px;">
+                    Evaluando todas las opciones (goles, córners, tarjetas y combinadas), la mejor apuesta es:
                 </p>
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
-                    <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; align-items: center;">
+                    <p style="color: white; font-size: 16px; font-weight: 900; margin-bottom: 8px; line-height: 1.3;">
                         ${mejorOpcion.nombre}
                     </p>
-                    <p style="color: #10b981; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
+                    <p style="color: #10b981; font-size: 16px; font-weight: bold; margin-bottom: 10px;">
                         ${Math.round(mejorOpcion.valor)}% de probabilidad
                     </p>
-                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid ${colorConfianza};">
+                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid ${colorConfianza};">
                         CONFIANZA: ${nivelConfianza}
                     </span>
                 </div>
