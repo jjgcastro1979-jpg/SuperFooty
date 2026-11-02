@@ -1,145 +1,7 @@
-// ==========================================
-// SUPERFOOTY PRO - CONECTADO A TU PUENTE CLOUDFLARE
-// ==========================================
-
-// ⚠️ AQUÍ ESTÁ TU PUENTE REAL
-const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
-
-const ligasFootballData = {
-    "esp.1": { nombre: "La Liga", slug: "PD" },
-    "eng.1": { nombre: "Premier League", slug: "PL" },
-    "ita.1": { nombre: "Serie A", slug: "SA" },
-    "ger.1": { nombre: "Bundesliga", slug: "BL1" },
-    "fra.1": { nombre: "Ligue 1", slug: "FL1" }
-};
-
-// Base de datos de fuerzas para el motor matemático
-const equiposData = {
-    "Real Madrid": { atk: 2.1, def: 0.8 },
-    "Barcelona": { atk: 2.0, def: 1.0 },
-    "Atletico": { atk: 1.6, def: 0.7 },
-    "Athletic": { atk: 1.4, def: 0.9 },
-    "Real Sociedad": { atk: 1.3, def: 1.0 },
-    "Betis": { atk: 1.3, def: 1.2 },
-    "Sevilla": { atk: 1.1, def: 1.3 },
-    "Valencia": { atk: 1.1, def: 1.2 },
-    "Villarreal": { atk: 1.5, def: 1.3 },
-    "Getafe": { atk: 0.8, def: 1.1 },
-    "Osasuna": { atk: 1.0, def: 1.1 },
-    "Elche": { atk: 0.9, def: 1.2 },
-    "Deportivo": { atk: 1.2, def: 1.3 },
-    "Malaga": { atk: 1.1, def: 1.2 },
-    "Man City": { atk: 2.2, def: 0.9 },
-    "Arsenal": { atk: 1.9, def: 0.8 },
-    "Liverpool": { atk: 1.8, def: 1.0 },
-    "Chelsea": { atk: 1.5, def: 1.1 },
-    "Man United": { atk: 1.3, def: 1.2 },
-    "Tottenham": { atk: 1.5, def: 1.3 }
-};
-
-const defaultTeam = { atk: 1.2, def: 1.2 };
-
-function factorial(n) {
-    if (n === 0 || n === 1) return 1;
-    let result = 1;
-    for (let i = 2; i <= n; i++) result *= i;
-    return result;
-}
-
-function poisson(k, lambda) {
-    return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
-}
-
-function crearBarraProbabilidad(titulo, probabilidad) {
-    let prob = parseFloat(probabilidad) || 0;
-    let color = "#ef4444"; 
-    if (prob >= 65) color = "#10b981";
-    else if (prob >= 40) color = "#f59e0b";
-
-    return `
-        <div style="margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; margin-bottom: 4px;">
-                <span style="color: #475569;">${titulo}</span>
-                <span style="color: ${color};">${Math.round(prob)}%</span>
-            </div>
-            <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                <div style="width: ${prob}%; height: 100%; background: ${color}; border-radius: 3px;"></div>
-            </div>
-        </div>
-    `;
-}
-
-async function cargarPartidos() {
-    const listaDiv = document.getElementById('lista-partidos');
-    const ligaId = document.getElementById('league-select').value;
-    const ligaInfo = ligasFootballData[ligaId];
-
-    if (!ligaInfo) { alert("Liga no configurada."); return; }
-
-    listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales en la API... ⏳</div>`;
-
-    try {
-        const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?status=SCHEDULED`;
-        const response = await fetch(url);
-        
-        // --- ESCUDO DE SEGURIDAD ---
-        // Leemos la respuesta como texto primero para evitar el error de JSON
-        const textoRespuesta = await response.text();
-
-        if (textoRespuesta.includes("Hola, este") || textoRespuesta.includes("Hello World")) {
-            throw new Error("El Worker de Cloudflare todavía tiene el código por defecto. Debes ir a Cloudflare y pegar el código correcto.");
-        }
-
-        if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status} - Asegúrate de que tu clave API esté bien configurada en Cloudflare.`);
-        }
-
-        // Si pasó el escudo, convertimos a JSON de forma segura
-        const data = JSON.parse(textoRespuesta);
-        const partidos = data.matches || [];
-
-        if (partidos.length > 0) {
-            listaDiv.innerHTML = partidos.slice(0, 10).map(match => {
-                const local = match.homeTeam.name;
-                const visita = match.awayTeam.name;
-                
-                const fechaObj = new Date(match.utcDate);
-                const fechaReal = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-                
-                return `
-                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaReal}')">
-                        <div class="match-header">
-                            <span class="league-badge">${ligaInfo.nombre}</span>
-                            <span class="match-time">📅 ${fechaReal} - ⏰ ${hora}</span>
-                        </div>
-                        <div class="teams-row">
-                            <div class="team-name">${local}</div>
-                            <div class="vs-badge">VS</div>
-                            <div class="team-name right">${visita}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        } else {
-            listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay próximos partidos programados para ${ligaInfo.nombre} en la API.</p>`;
-        }
-    } catch (error) {
-        listaDiv.innerHTML = `
-            <div style='background: #fee2e2; border: 1px solid #ef4444; padding: 15px; border-radius: 8px; color: #b91c1c;'>
-                <h4 style="margin-top:0;">Error de conexión</h4>
-                <p style="font-size: 13px;">${error.message}</p>
-                <p style="font-size: 11px; margin-bottom:0;"><strong>Pista:</strong> Revisa que en Cloudflare hayas borrado el "Hola mundo" y hayas puesto el código puente correcto.</p>
-            </div>
-        `;
-    }
-}
-
 function analizarPartido(local, visita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
     listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis matemático... ⏳</div>`;
 
-    // --- BUSCAMOS LAS FUERZAS REALES (con coincidencia parcial de nombres) ---
     let dataL = defaultTeam;
     let dataV = defaultTeam;
     
@@ -148,7 +10,6 @@ function analizarPartido(local, visita, fechaISO) {
         if (visita.includes(key)) dataV = equiposData[key];
     }
 
-    // --- CÁLCULO MATEMÁTICO (POISSON) ---
     const xgL = dataL.atk * dataV.def * 1.2; 
     const xgV = dataV.atk * dataL.def;
 
@@ -171,39 +32,49 @@ function analizarPartido(local, visita, fechaISO) {
     probWinL = probWinL * 100; probWinV = probWinV * 100; probDraw = probDraw * 100;
     probOver15 = probOver15 * 100; probOver25 = probOver25 * 100;
 
-    let cornersL = Math.min(probOver15 + 10, 95);
-    let cornersV = Math.min(probOver15 + 5, 95);
-    let tarjetasL = Math.min(probOver25 + 20, 95);
-    let tarjetasV = Math.min(probOver25 + 15, 95);
+    // INDIVIDUALES (Simulados con base matemática)
+    let golesL = [Math.min(probOver15 + 20, 95), Math.min(probOver15 - 10, 95), Math.min(probOver25 - 20, 95)];
+    let golesV = [Math.min(probOver15 + 15, 95), Math.min(probOver15 - 15, 95), Math.min(probOver25 - 25, 95)];
+    let cornersL = [Math.min(probOver15 + 25, 95), Math.min(probOver15 + 5, 95), Math.min(probOver15 - 15, 95)];
+    let cornersV = [Math.min(probOver15 + 20, 95), Math.min(probOver15, 95), Math.min(probOver15 - 20, 95)];
+    let tarjetasL = [Math.min(probOver25 + 30, 95), Math.min(probOver25 + 10, 95), Math.min(probOver25 - 10, 95)];
+    let tarjetasV = [Math.min(probOver25 + 25, 95), Math.min(probOver25 + 5, 95), Math.min(probOver25 - 15, 95)];
 
-    // --- SIMULACIÓN DE TEMPORADA Y H2H ---
+    // TEMPORADA Y H2H
     const pj = 14; 
     let winL = Math.round(dataL.atk * 4); let drawL = Math.round(dataL.def * 2); let lossL = Math.max(pj - winL - drawL, 0);
     let winV = Math.round(dataV.atk * 3); let drawV = Math.round(dataV.def * 2); let lossV = Math.max(pj - winV - drawV, 0);
-    let h2hL = Math.floor(Math.random() * 3) + 1;
-    let h2hE = Math.floor(Math.random() * 3) + 1;
-    let h2hV = Math.floor(Math.random() * 3) + 1;
+    let h2hL = Math.floor(Math.random() * 3) + 1; let h2hE = Math.floor(Math.random() * 3) + 1; let h2hV = Math.floor(Math.random() * 3) + 1;
 
-    // --- TEXTO TÁCTICO ---
-    let textoAnalisis = "";
-    if (probWinL > 60) {
-        textoAnalisis = `El modelo otorga una clara ventaja a ${local}. Su alta capacidad ofensiva (xG de ${xgL.toFixed(2)}) sugiere que dominará el partido. Con ${winL} victorias, llega en un gran momento.`;
-    } else if (probWinV > 60) {
-        textoAnalisis = `A pesar de jugar fuera, ${visita} es el claro favorito. Con un xG de ${xgV.toFixed(2)} y ${winV} victorias, su ataque debería superar la resistencia de ${local}.`;
-    } else if (bttsYes > 60) {
-        textoAnalisis = `Se espera un partido abierto. Ambos equipos tienen alta probabilidad de anotar (${Math.round(bttsYes)}%). Sus enfrentamientos directos han sido muy disputados.`;
-    } else {
-        textoAnalisis = `Partido muy táctico y cerrado. Tanto ${local} como ${visita} priorizan el orden defensivo. El historial reciente muestra tendencia a marcadores cortos.`;
-    }
+    let textoAnalisis = probWinL > 60 ? `El modelo otorga una clara ventaja a ${local}. Su alta capacidad ofensiva (xG de ${xgL.toFixed(2)}) sugiere que dominará el partido.` : (probWinV > 60 ? `A pesar de jugar fuera, ${visita} es el claro favorito. Con un xG de ${xgV.toFixed(2)}, su ataque debería superar a ${local}.` : (bttsYes > 60 ? `Se espera un partido abierto. Ambos equipos tienen alta probabilidad de anotar (${Math.round(bttsYes)}%).` : `Partido muy táctico y cerrado. Las defensas se impondrán a los ataques.`));
 
-    let mejorOpcion = { nombre: "Empate", valor: probDraw };
-    if (probWinL > mejorOpcion.valor) mejorOpcion = { nombre: `Victoria ${local}`, valor: probWinL };
-    if (probWinV > mejorOpcion.valor) mejorOpcion = { nombre: `Victoria ${visita}`, valor: probWinV };
-    if (probOver25 > mejorOpcion.valor) mejorOpcion = { nombre: `Más de 2.5 Goles`, valor: probOver25 };
-    if (bttsYes > mejorOpcion.valor) mejorOpcion = { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes };
+    // --- 1. GRUPO DE MERCADOS PRINCIPALES (Globales) ---
+    let mercadosPrincipales = [
+        { nombre: `Victoria ${local}`, valor: probWinL },
+        { nombre: `Empate`, valor: probDraw },
+        { nombre: `Victoria ${visita}`, valor: probWinV },
+        { nombre: `Más de 2.5 Goles`, valor: probOver25 },
+        { nombre: `Menos de 2.5 Goles`, valor: 100 - probOver25 },
+        { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes },
+        { nombre: `Ambos Equipos Marcan (NO)`, valor: 100 - bttsYes }
+    ];
+    mercadosPrincipales.sort((a, b) => b.valor - a.valor);
+    let mejorGlobal = mercadosPrincipales[0];
 
-    let nivelConfianza = mejorOpcion.valor >= 70 ? "ALTA" : (mejorOpcion.valor >= 50 ? "MEDIA" : "BAJA");
-    let colorConfianza = nivelConfianza === "ALTA" ? "#10b981" : (nivelConfianza === "MEDIA" ? "#f59e0b" : "#ef4444");
+    // --- 2. GRUPO DE MERCADOS INDIVIDUALES (Secundarios) ---
+    let mercadosIndividuales = [
+        { nombre: `${local} +1.5 Goles`, valor: golesL[1] },
+        { nombre: `${visita} +1.5 Goles`, valor: golesV[1] },
+        { nombre: `${local} +4.5 Córners`, valor: cornersL[1] },
+        { nombre: `${visita} +4.5 Córners`, valor: cornersV[1] },
+        { nombre: `${local} +2.5 Tarjetas`, valor: tarjetasL[1] },
+        { nombre: `${visita} +2.5 Tarjetas`, valor: tarjetasV[1] }
+    ];
+    mercadosIndividuales.sort((a, b) => b.valor - a.valor);
+    let mejorIndividual = mercadosIndividuales[0];
+
+    let colorGlobal = mejorGlobal.valor >= 65 ? "#10b981" : (mejorGlobal.valor >= 45 ? "#f59e0b" : "#ef4444");
+    let colorIndividual = mejorIndividual.valor >= 75 ? "#10b981" : (mejorIndividual.valor >= 55 ? "#f59e0b" : "#ef4444");
 
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
@@ -261,46 +132,84 @@ function analizarPartido(local, visita, fechaISO) {
                 ${crearBarraProbabilidad("NO (Alguien deja la portería a cero)", 100 - bttsYes)}
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Probabilidad de Goles</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("Más de 1.5 Goles Totales", probOver15)}
-                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", probOver25)}
-            </div>
-
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners y 🟨 Tarjetas</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles por Equipo</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+4.5 Córners", cornersL)}
-                    ${crearBarraProbabilidad("+2.5 Tarjetas", tarjetasL)}
+                    ${crearBarraProbabilidad("+0.5", golesL[0])}
+                    ${crearBarraProbabilidad("+1.5", golesL[1])}
+                    ${crearBarraProbabilidad("+2.5", golesL[2])}
                 </div>
                 <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+4.5 Córners", cornersV)}
-                    ${crearBarraProbabilidad("+2.5 Tarjetas", tarjetasV)}
+                    ${crearBarraProbabilidad("+0.5", golesV[0])}
+                    ${crearBarraProbabilidad("+1.5", golesV[1])}
+                    ${crearBarraProbabilidad("+2.5", golesV[2])}
                 </div>
             </div>
 
-            <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
-                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
-                    🏆 RECOMENDACIÓN FINAL
-                </h4>
-                <p style="color: #cbd5e1; font-size: 13px; text-align: center; margin-bottom: 15px;">
-                    La opción con mayor probabilidad estadística es:
-                </p>
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
-                    <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
-                        ${mejorOpcion.nombre}
-                    </p>
-                    <p style="color: #10b981; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
-                        ${Math.round(mejorOpcion.valor)}% de probabilidad
-                    </p>
-                    <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid ${colorConfianza};">
-                        CONFIANZA: ${nivelConfianza}
-                    </span>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners por Equipo</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
+                    ${crearBarraProbabilidad("+3.5", cornersL[0])}
+                    ${crearBarraProbabilidad("+4.5", cornersL[1])}
+                    ${crearBarraProbabilidad("+5.5", cornersL[2])}
                 </div>
+                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
+                    ${crearBarraProbabilidad("+3.5", cornersV[0])}
+                    ${crearBarraProbabilidad("+4.5", cornersV[1])}
+                    ${crearBarraProbabilidad("+5.5", cornersV[2])}
+                </div>
+            </div>
+
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🟨 Tarjetas por Equipo</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
+                    ${crearBarraProbabilidad("+1.5", tarjetasL[0])}
+                    ${crearBarraProbabilidad("+2.5", tarjetasL[1])}
+                    ${crearBarraProbabilidad("+3.5", tarjetasL[2])}
+                </div>
+                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
+                    ${crearBarraProbabilidad("+1.5", tarjetasV[0])}
+                    ${crearBarraProbabilidad("+2.5", tarjetasV[1])}
+                    ${crearBarraProbabilidad("+3.5", tarjetasV[2])}
+                </div>
+            </div>
+
+            <!-- RECOMENDACIONES FINALES SEPARADAS -->
+            <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
+                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 15px;">
+                    🏆 CONCLUSIONES DEL ANÁLISIS
+                </h4>
+                
+                <!-- Mejor Opción Global -->
+                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px;">
+                    <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">🎯 MEJOR APUESTA GLOBAL (Partido)</p>
+                    <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
+                        ${mejorGlobal.nombre}
+                    </p>
+                    <p style="color: ${colorGlobal}; font-size: 14px; font-weight: bold;">
+                        ${Math.round(mejorGlobal.valor)}% de probabilidad
+                    </p>
+                </div>
+
+                <!-- Mejor Opción Individual -->
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #334155;">
+                    <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">⭐ MEJOR APUESTA INDIVIDUAL (Equipo)</p>
+                    <p style="color: white; font-size: 16px; font-weight: 900; margin-bottom: 5px;">
+                        ${mejorIndividual.nombre}
+                    </p>
+                    <p style="color: ${colorIndividual}; font-size: 13px; font-weight: bold;">
+                        ${Math.round(mejorIndividual.valor)}% de probabilidad
+                    </p>
+                </div>
+
             </div>
 
         </div>
     `;
-}
+                          }
