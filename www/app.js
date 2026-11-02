@@ -1,15 +1,13 @@
 // ==========================================
-// SUPERFOOTY PRO - VERSIÓN FINAL DEFINITIVA
+// SUPERFOOTY PRO - DATOS 100% REALES (ESPN HOY)
 // ==========================================
 
-const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
-
-const ligasFootballData = {
-    "esp.1": { nombre: "La Liga", slug: "PD" },
-    "eng.1": { nombre: "Premier League", slug: "PL" },
-    "ita.1": { nombre: "Serie A", slug: "SA" },
-    "ger.1": { nombre: "Bundesliga", slug: "BL1" },
-    "fra.1": { nombre: "Ligue 1", slug: "FL1" }
+const ligasESPN = {
+    "esp.1": { nombre: "La Liga", slug: "esp.1" },
+    "eng.1": { nombre: "Premier League", slug: "eng.1" },
+    "ita.1": { nombre: "Serie A", slug: "ita.1" },
+    "ger.1": { nombre: "Bundesliga", slug: "ger.1" },
+    "fra.1": { nombre: "Ligue 1", slug: "fra.1" }
 };
 
 const equiposData = {
@@ -38,23 +36,12 @@ const equiposData = {
 
 const defaultTeam = { atk: 1.2, def: 1.2 };
 
-function factorial(n) {
-    if (n === 0 || n === 1) return 1;
-    let result = 1;
-    for (let i = 2; i <= n; i++) result *= i;
-    return result;
-}
-
-function poisson(k, lambda) {
-    return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
-}
+function factorial(n) { if (n === 0 || n === 1) return 1; let result = 1; for (let i = 2; i <= n; i++) result *= i; return result; }
+function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k); }
 
 function crearBarraProbabilidad(titulo, probabilidad) {
     let prob = parseFloat(probabilidad) || 0;
-    let color = "#ef4444"; 
-    if (prob >= 65) color = "#10b981";
-    else if (prob >= 40) color = "#f59e0b";
-
+    let color = "#ef4444"; if (prob >= 65) color = "#10b981"; else if (prob >= 40) color = "#f59e0b";
     return `
         <div style="margin-bottom: 8px;">
             <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; margin-bottom: 4px;">
@@ -71,44 +58,46 @@ function crearBarraProbabilidad(titulo, probabilidad) {
 async function cargarPartidos() {
     const listaDiv = document.getElementById('lista-partidos');
     const ligaId = document.getElementById('league-select').value;
-    const ligaInfo = ligasFootballData[ligaId];
+    const ligaInfo = ligasESPN[ligaId];
 
     if (!ligaInfo) { alert("Liga no configurada."); return; }
 
-    listaDiv.innerHTML = `<div class='loader'>Buscando los partidos reales de hoy... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>Buscando partidos reales de hoy... ⏳</div>`;
 
     try {
-        // 🪄 LA MAGIA DE LA FECHA: Si el móvil está en 2026, buscamos en 2024
-        const hoy = new Date();
-        const anioReal = hoy.getFullYear() > 2025 ? 2024 : hoy.getFullYear(); 
-        const mesReal = String(hoy.getMonth() + 1).padStart(2, '0');
-        const diaReal = String(hoy.getDate()).padStart(2, '0');
-        const fechaReal = `${anioReal}-${mesReal}-${diaReal}`;
-
-        const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?dateFrom=${fechaReal}&dateTo=${fechaReal}`;
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${ligaInfo.slug}/scoreboard`;
         const response = await fetch(url);
-        
-        if (!response.ok) {
-            if (response.status === 429) throw new Error("Límite de peticiones alcanzado. Espera 1 minuto antes de volver a buscar.");
-            throw new Error(`Error HTTP: ${response.status}`);
-        }
-
         const data = await response.json();
-        const partidos = data.matches || [];
+        
+        const partidos = data.events || [];
 
         if (partidos.length > 0) {
             listaDiv.innerHTML = partidos.map(match => {
-                const local = match.homeTeam.name;
-                const visita = match.awayTeam.name;
-                const fechaObj = new Date(match.utcDate);
-                const fechaStr = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                const hora = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                const local = match.competitions[0].competitors.find(c => c.homeAway === 'home').team.displayName;
+                const visita = match.competitions[0].competitors.find(c => c.homeAway === 'away').team.displayName;
+                const fechaReal = new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                const hora = new Date(match.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                 
+                const estado = match.status?.type?.state;
+                const scoreHome = match.competitions[0].competitors.find(c => c.homeAway === 'home').score;
+                const scoreAway = match.competitions[0].competitors.find(c => c.homeAway === 'away').score;
+
+                let displayTime = `⏰ ${hora}`;
+                let extraBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Pendiente</span>`;
+
+                if (estado === 'post') {
+                    displayTime = `<span style="color: #ef4444; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">Finalizado</span>`;
+                } else if (estado === 'in') {
+                    displayTime = `<span style="color: #10b981; font-weight: 900; font-size: 14px;">${scoreHome} - ${scoreAway}</span>`;
+                    extraBadge = `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">EN VIVO</span>`;
+                }
+
                 return `
-                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaStr}')">
+                    <div class="match-card" onclick="analizarPartido('${local}', '${visita}', '${fechaReal}')">
                         <div class="match-header">
-                            <span class="league-badge">${ligaInfo.nombre}</span>
-                            <span class="match-time">📅 ${fechaStr} - ⏰ ${hora}</span>
+                            <span class="league-badge">${ligaInfo.nombre} ${extraBadge}</span>
+                            <span class="match-time">📅 ${fechaReal} - ${displayTime}</span>
                         </div>
                         <div class="teams-row">
                             <div class="team-name">${local}</div>
@@ -122,17 +111,19 @@ async function cargarPartidos() {
             listaDiv.innerHTML = `<p style='text-align:center; padding:20px; color:#64748b;'>No hay partidos de ${ligaInfo.nombre} programados para hoy en la vida real.</p>`;
         }
     } catch (error) {
-        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px; font-weight:bold;'>⚠️ ${error.message}</p>`;
+        listaDiv.innerHTML = `<p style='color:red; text-align:center; padding:20px;'>Error al conectar con los datos reales de ESPN.</p>`;
     }
 }
 
 function analizarPartido(local, visita, fechaISO) {
     const listaDiv = document.getElementById('lista-partidos');
-    listaDiv.innerHTML = `<div class='loader'>🧠 Calculando análisis completo... ⏳</div>`;
+    listaDiv.innerHTML = `<div class='loader'>🧠 Analizando partido real... ⏳</div>`;
 
+    // --- BUSCAMOS LAS FUERZAS REALES ---
     let dataL = defaultTeam;
     let dataV = defaultTeam;
     
+    // Buscamos coincidencias parciales en los nombres para asignar la fuerza
     for (let key in equiposData) {
         if (local.includes(key)) dataL = equiposData[key];
         if (visita.includes(key)) dataV = equiposData[key];
@@ -160,45 +151,18 @@ function analizarPartido(local, visita, fechaISO) {
     probWinL = probWinL * 100; probWinV = probWinV * 100; probDraw = probDraw * 100;
     probOver15 = probOver15 * 100; probOver25 = probOver25 * 100;
 
-    let golesL = [Math.min(probOver15 + 20, 95), Math.min(probOver15 - 10, 95), Math.min(probOver25 - 20, 95)];
-    let golesV = [Math.min(probOver15 + 15, 95), Math.min(probOver15 - 15, 95), Math.min(probOver25 - 25, 95)];
-    let cornersL = [Math.min(probOver15 + 25, 95), Math.min(probOver15 + 5, 95), Math.min(probOver15 - 15, 95)];
-    let cornersV = [Math.min(probOver15 + 20, 95), Math.min(probOver15, 95), Math.min(probOver15 - 20, 95)];
-    let tarjetasL = [Math.min(probOver25 + 30, 95), Math.min(probOver25 + 10, 95), Math.min(probOver25 - 10, 95)];
-    let tarjetasV = [Math.min(probOver25 + 25, 95), Math.min(probOver25 + 5, 95), Math.min(probOver25 - 15, 95)];
-
+    // SIMULAMOS EL RESUMEN DE TEMPORADA BASADO EN LA FUERZA REAL
     const pj = 14; 
-    let winL = Math.round(dataL.atk * 4); let drawL = Math.round(dataL.def * 2); let lossL = Math.max(pj - winL - drawL, 0);
-    let winV = Math.round(dataV.atk * 3); let drawV = Math.round(dataV.def * 2); let lossV = Math.max(pj - winV - drawV, 0);
-    let h2hL = Math.floor(Math.random() * 3) + 1; let h2hE = Math.floor(Math.random() * 3) + 1; let h2hV = Math.floor(Math.random() * 3) + 1;
+    let winL = Math.round(dataL.atk * 4); let drawL = Math.round(dataL.def * 2); let lossL = pj - winL - drawL;
+    let winV = Math.round(dataV.atk * 3); let drawV = Math.round(dataV.def * 2); let lossV = pj - winV - drawV;
 
-    let textoAnalisis = probWinL > 60 ? `El modelo otorga una clara ventaja a ${local}. Su alta capacidad ofensiva (xG de ${xgL.toFixed(2)}) sugiere que dominará el partido.` : (probWinV > 60 ? `A pesar de jugar fuera, ${visita} es el claro favorito. Con un xG de ${xgV.toFixed(2)}, su ataque debería superar a ${local}.` : (bttsYes > 60 ? `Se espera un partido abierto. Ambos equipos tienen alta probabilidad de anotar (${Math.round(bttsYes)}%).` : `Partido muy táctico y cerrado. Las defensas se impondrán a los ataques.`));
+    let mejorOpcion = { nombre: "Empate", valor: probDraw };
+    if (probWinL > mejorOpcion.valor) mejorOpcion = { nombre: `Victoria ${local}`, valor: probWinL };
+    if (probWinV > mejorOpcion.valor) mejorOpcion = { nombre: `Victoria ${visita}`, valor: probWinV };
+    if (probOver25 > mejorOpcion.valor) mejorOpcion = { nombre: `Más de 2.5 Goles`, valor: probOver25 };
+    if (bttsYes > mejorOpcion.valor) mejorOpcion = { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes };
 
-    let mercadosPrincipales = [
-        { nombre: `Victoria ${local}`, valor: probWinL },
-        { nombre: `Empate`, valor: probDraw },
-        { nombre: `Victoria ${visita}`, valor: probWinV },
-        { nombre: `Más de 2.5 Goles`, valor: probOver25 },
-        { nombre: `Menos de 2.5 Goles`, valor: 100 - probOver25 },
-        { nombre: `Ambos Equipos Marcan (SÍ)`, valor: bttsYes },
-        { nombre: `Ambos Equipos Marcan (NO)`, valor: 100 - bttsYes }
-    ];
-    mercadosPrincipales.sort((a, b) => b.valor - a.valor);
-    let mejorGlobal = mercadosPrincipales[0];
-
-    let mercadosIndividuales = [
-        { nombre: `${local} +1.5 Goles`, valor: golesL[1] },
-        { nombre: `${visita} +1.5 Goles`, valor: golesV[1] },
-        { nombre: `${local} +4.5 Córners`, valor: cornersL[1] },
-        { nombre: `${visita} +4.5 Córners`, valor: cornersV[1] },
-        { nombre: `${local} +2.5 Tarjetas`, valor: tarjetasL[1] },
-        { nombre: `${visita} +2.5 Tarjetas`, valor: tarjetasV[1] }
-    ];
-    mercadosIndividuales.sort((a, b) => b.valor - a.valor);
-    let mejorIndividual = mercadosIndividuales[0];
-
-    let colorGlobal = mejorGlobal.valor >= 65 ? "#10b981" : (mejorGlobal.valor >= 45 ? "#f59e0b" : "#ef4444");
-    let colorIndividual = mejorIndividual.valor >= 75 ? "#10b981" : (mejorIndividual.valor >= 55 ? "#f59e0b" : "#ef4444");
+    let confColor = mejorOpcion.valor >= 70 ? "#10b981" : (mejorOpcion.valor >= 50 ? "#f59e0b" : "#ef4444");
 
     listaDiv.innerHTML = `
         <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
@@ -209,38 +173,18 @@ function analizarPartido(local, visita, fechaISO) {
                 <div style="text-align: center; width: 20%;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
                 <div style="text-align: center; width: 40%;"><h3 style="font-size: 14px; margin: 0;">${visita}</h3></div>
             </div>
-            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px;">📅 ${fechaISO}</p>
-            
-            <div style="background: #0f172a; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-                <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">📊 MODELO MATEMÁTICO (POISSON)</p>
-                <p style="color: #10b981; font-size: 14px; font-weight: 900;">Goles Esperados (xG): ${xgL.toFixed(2)} - ${xgV.toFixed(2)}</p>
-            </div>
+            <p style="text-align:center; color:#64748b; font-size:11px; margin-bottom:15px;">📅 Partido Real: ${fechaISO}</p>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Temporada y H2H</h4>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <div style="width: 45%; text-align: center;">
-                        <p style="font-weight: bold; color: var(--primary); margin-bottom: 5px;">${local}</p>
-                        <p style="font-size: 12px; color: #475569;">${winL}V - ${drawL}E - ${lossL}D</p>
-                    </div>
-                    <div style="width: 10%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #cbd5e1;">|</div>
-                    <div style="width: 45%; text-align: center;">
-                        <p style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">${visita}</p>
-                        <p style="font-size: 12px; color: #475569;">${winV}V - ${drawV}E - ${lossV}D</p>
-                    </div>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Temporada (Estimación por Fuerza)</h4>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
+                <div style="width: 45%; text-align: center;">
+                    <p style="font-weight: bold; color: var(--primary); margin-bottom: 5px;">${local}</p>
+                    <p style="font-size: 12px; color: #475569;">${winL}V - ${drawL}E - ${lossL}D</p>
                 </div>
-                <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
-                    <p style="font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 5px;">Últimos enfrentamientos:</p>
-                    <div style="display: flex; justify-content: space-around; font-size: 12px;">
-                        <span style="color: #10b981;">${local}: ${h2hL} Victorias</span>
-                        <span style="color: #f59e0b;">Empates: ${h2hE}</span>
-                        <span style="color: #ef4444;">${visita}: ${h2hV} Victorias</span>
-                    </div>
+                <div style="width: 45%; text-align: center;">
+                    <p style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">${visita}</p>
+                    <p style="font-size: 12px; color: #475569;">${winV}V - ${drawV}E - ${lossV}D</p>
                 </div>
-            </div>
-
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:15px; border-radius:12px; margin-bottom: 20px;">
-                <p style="color:#14532d; font-size:13px; line-height:1.6; margin: 0;"><strong>Análisis Táctico:</strong> ${textoAnalisis}</p>
             </div>
 
             <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📊 Probabilidades 1X2</h4>
@@ -250,87 +194,26 @@ function analizarPartido(local, visita, fechaISO) {
                 ${crearBarraProbabilidad(`Victoria ${visita}`, probWinV)}
             </div>
 
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🤝 Ambos Equipos Marcan</h4>
+            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles</h4>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                ${crearBarraProbabilidad("SÍ (Ambos anotan)", bttsYes)}
-                ${crearBarraProbabilidad("NO (Alguien deja la portería a cero)", 100 - bttsYes)}
-            </div>
-
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Goles por Equipo</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+0.5", golesL[0])}
-                    ${crearBarraProbabilidad("+1.5", golesL[1])}
-                    ${crearBarraProbabilidad("+2.5", golesL[2])}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+0.5", golesV[0])}
-                    ${crearBarraProbabilidad("+1.5", golesV[1])}
-                    ${crearBarraProbabilidad("+2.5", golesV[2])}
-                </div>
-            </div>
-
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners por Equipo</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+3.5", cornersL[0])}
-                    ${crearBarraProbabilidad("+4.5", cornersL[1])}
-                    ${crearBarraProbabilidad("+5.5", cornersL[2])}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+3.5", cornersV[0])}
-                    ${crearBarraProbabilidad("+4.5", cornersV[1])}
-                    ${crearBarraProbabilidad("+5.5", cornersV[2])}
-                </div>
-            </div>
-
-            <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🟨 Tarjetas por Equipo</h4>
-            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: var(--primary); margin-bottom: 8px;">${local}</p>
-                    ${crearBarraProbabilidad("+1.5", tarjetasL[0])}
-                    ${crearBarraProbabilidad("+2.5", tarjetasL[1])}
-                    ${crearBarraProbabilidad("+3.5", tarjetasL[2])}
-                </div>
-                <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p style="text-align: center; font-weight: bold; font-size: 11px; color: #ef4444; margin-bottom: 8px;">${visita}</p>
-                    ${crearBarraProbabilidad("+1.5", tarjetasV[0])}
-                    ${crearBarraProbabilidad("+2.5", tarjetasV[1])}
-                    ${crearBarraProbabilidad("+3.5", tarjetasV[2])}
-                </div>
+                ${crearBarraProbabilidad("Ambos Marcan (SÍ)", bttsYes)}
+                ${crearBarraProbabilidad("Más de 2.5 Goles Totales", probOver25)}
             </div>
 
             <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-top: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
-                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 15px;">
-                    🏆 CONCLUSIONES DEL ANÁLISIS
+                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
+                    🏆 RECOMENDACIÓN FINAL
                 </h4>
-                
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px;">
-                    <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">🎯 MEJOR APUESTA GLOBAL (Partido)</p>
+                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
                     <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">
-                        ${mejorGlobal.nombre}
+                        ${mejorOpcion.nombre}
                     </p>
-                    <p style="color: ${colorGlobal}; font-size: 14px; font-weight: bold;">
-                        ${Math.round(mejorGlobal.valor)}% de probabilidad
-                    </p>
-                </div>
-
-                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #334155;">
-                    <p style="color: #94a3b8; font-size: 11px; font-weight: bold; margin-bottom: 5px;">⭐ MEJOR APUESTA INDIVIDUAL (Equipo)</p>
-                    <p style="color: white; font-size: 16px; font-weight: 900; margin-bottom: 5px;">
-                        ${mejorIndividual.nombre}
-                    </p>
-                    <p style="color: ${colorIndividual}; font-size: 13px; font-weight: bold;">
-                        ${Math.round(mejorIndividual.valor)}% de probabilidad
+                    <p style="color: #10b981; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
+                        ${Math.round(mejorOpcion.valor)}% de probabilidad
                     </p>
                 </div>
-
             </div>
 
         </div>
     `;
-                              }
+                                              }
