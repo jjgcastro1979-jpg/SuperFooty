@@ -16,24 +16,20 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--light); color: var(--dark); padding-bottom: 70px; }
         
-        /* CABECERA */
         header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: center; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .logo { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
         .logo span { color: var(--accent); }
         
-        /* MENÚ INFERIOR */
         nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; border-top: 1px solid #e2e8f0; }
         nav a { color: var(--gray); text-decoration: none; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         nav a.active { color: var(--primary); }
         
-        /* PÁGINAS */
         .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: fadeIn 0.4s ease-out; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--dark); border-left: 5px solid var(--accent); padding-left: 10px;}
         
-        /* TARJETAS DE PARTIDOS */
         .match-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; transition: transform 0.2s; }
         .match-card:active { transform: scale(0.98); }
         .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -44,15 +40,13 @@
         .team-name.right { text-align: right; }
         .vs-badge { background: var(--dark); color: white; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
-        /* BOTONES Y CARGADOR */
         .btn { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 15px; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
         .btn:active { background: #059669; }
+        
         .loader { text-align: center; font-weight: bold; color: var(--primary); padding: 30px; }
         
-        /* SELECTORES Y CALENDARIO */
-        select, input[type="date"] { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; background: white; font-size: 15px; font-weight: bold; color: var(--dark); }
+        select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; background: white; font-size: 15px; font-weight: bold; color: var(--dark); }
 
-        /* BARRAS DE DUELO */
         .duel-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
         .duel-stats { display: flex; flex-direction: column; width: 100%; gap: 5px; }
         .duel-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: var(--dark); margin-bottom: 5px; }
@@ -71,13 +65,13 @@
     <main id="inicio" class="page active">
         <div style="background: linear-gradient(135deg, var(--primary), #3b82f6); color: white; padding: 30px; border-radius: 20px; text-align: center; margin-bottom: 20px;">
             <h1 style="font-size: 28px; margin-bottom: 10px;">Bienvenido a SuperFooty</h1>
-            <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Análisis real con Inteligencia Artificial.</p>
-            <button class="btn" onclick="showPage('partidos')" style="background:white; color:var(--primary); box-shadow:none;">Empezar a Analizar</button>
+            <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Partidos en vivo y análisis con IA.</p>
+            <button class="btn" onclick="showPage('partidos')" style="background:white; color:var(--primary); box-shadow:none;">Ver Partidos de Hoy</button>
         </div>
     </main>
 
     <main id="partidos" class="page">
-        <h2>Partidos y Análisis</h2>
+        <h2>Partidos de Hoy</h2>
         
         <select id="league-select">
             <option value="esp.1">La Liga (España)</option>
@@ -87,12 +81,8 @@
             <option value="fra.1">Ligue 1 (Francia)</option>
         </select>
 
-        <!-- ESTE ES EL CALENDARIO QUE FALTABA -->
-        <input type="date" id="date-select">
-
-        <!-- AQUÍ SE VAN A MOSTRAR LOS PARTIDOS -->
         <div id="lista-partidos">
-            <div class="loader">Elige una fecha y pulsa Generar...</div>
+            <div class="loader">Pulsa Generar para ver los partidos de hoy...</div>
         </div>
         
         <br>
