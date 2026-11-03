@@ -1,5 +1,5 @@
 // ==========================================
-// SUPERFOOTY PRO - VERSIÓN PESTAÑAS (TABS)
+// SUPERFOOTY PRO - VERSIÓN PESTAÑAS A PRUEBA DE BALAS
 // ==========================================
 
 const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
@@ -38,7 +38,6 @@ function poisson(k, lambda) {
     return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
 }
 
-// Probabilidad de que ocurra MÁS de la línea (ej. si línea es 4.5, calcula P(X >= 5))
 function getOverProb(line, lambda) {
     let prob = 0;
     for(let i = 0; i <= Math.floor(line); i++) {
@@ -66,8 +65,7 @@ function crearBarraProbabilidad(titulo, probabilidad) {
     `;
 }
 
-// Función para generar la tabla de líneas (1.5 a 10.5) de forma limpia
-function generarTablaLineas(lambdaL, lambdaV, maxLine, unidad) {
+function generarTablaLineas(lambdaL, lambdaV, maxLine) {
     let lambdaT = lambdaL + lambdaV;
     let html = `<table style="width:100%; border-collapse: collapse; font-size: 12px; text-align: center; margin-top: 10px;">
         <tr style="background:#e2e8f0; color:#334155;">
@@ -95,16 +93,28 @@ function generarTablaLineas(lambdaL, lambdaV, maxLine, unidad) {
     return html;
 }
 
-// Función para cambiar de pestaña
-function cambiarPestana(tabId, btnElement) {
-    // Ocultar todos los contenidos
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    // Quitar color activo a todos los botones
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active-tab'));
+// Función SÚPER SIMPLE para cambiar de pestaña sin fallos
+function cambiarPestana(idTab) {
+    // Ocultar todas las pestañas
+    document.getElementById('tab-principal').style.display = 'none';
+    document.getElementById('tab-goles').style.display = 'none';
+    document.getElementById('tab-corners').style.display = 'none';
+    document.getElementById('tab-cards').style.display = 'none';
     
-    // Mostrar el seleccionado y ponerlo en verde
-    document.getElementById('tab-' + tabId).style.display = 'block';
-    btnElement.classList.add('active-tab');
+    // Quitar color verde a todos los botones
+    document.getElementById('btn-tab-principal').style.background = '#ffffff';
+    document.getElementById('btn-tab-principal').style.color = '#1e3a8a';
+    document.getElementById('btn-tab-goles').style.background = '#ffffff';
+    document.getElementById('btn-tab-goles').style.color = '#1e3a8a';
+    document.getElementById('btn-tab-corners').style.background = '#ffffff';
+    document.getElementById('btn-tab-corners').style.color = '#1e3a8a';
+    document.getElementById('btn-tab-cards').style.background = '#ffffff';
+    document.getElementById('btn-tab-cards').style.color = '#1e3a8a';
+
+    // Mostrar la pestaña seleccionada y poner su botón verde
+    document.getElementById('tab-' + idTab).style.display = 'block';
+    document.getElementById('btn-tab-' + idTab).style.background = '#10b981';
+    document.getElementById('btn-tab-' + idTab).style.color = '#ffffff';
 }
 
 async function cargarPartidos() {
@@ -178,7 +188,6 @@ function analizarPartido(local, visita, fechaISO) {
             if (visita.includes(key)) dataV = equiposData[key];
         }
 
-        // --- MATEMÁTICAS GOLES ---
         const xgL = dataL.atk * dataV.def * 1.2; 
         const xgV = dataV.atk * dataL.def;
 
@@ -201,7 +210,6 @@ function analizarPartido(local, visita, fechaISO) {
         probWinL = probWinL * 100; probWinV = probWinV * 100; probDraw = probDraw * 100;
         probOver15 = probOver15 * 100; probOver25 = probOver25 * 100;
 
-        // --- MATEMÁTICAS CÓRNERS Y TARJETAS ---
         let lambdaCornersL = Math.max(3.5, (dataL.atk * 3) - (dataV.def * 0.5) + 2);
         let lambdaCornersV = Math.max(3.5, (dataV.atk * 3) - (dataL.def * 0.5) + 2);
         let lambdaCardsL = Math.max(1.5, (dataV.atk * 1.5) - (dataL.def * 0.5) + 1);
@@ -210,14 +218,12 @@ function analizarPartido(local, visita, fechaISO) {
         let lambdaCornersT = lambdaCornersL + lambdaCornersV;
         let lambdaCardsT = lambdaCardsL + lambdaCardsV;
 
-        // --- TEXTO TÁCTICO ---
         let textoAnalisis = "";
         if (probWinL > 60) textoAnalisis = `El modelo otorga ventaja a ${local}. Su capacidad ofensiva (xG: ${xgL.toFixed(2)}) será clave.`;
         else if (probWinV > 60) textoAnalisis = `A pesar de jugar fuera, ${visita} es favorito. Su xG es de ${xgV.toFixed(2)}.`;
         else if (bttsYes > 60) textoAnalisis = `Partido abierto. Ambos equipos anotarán (${Math.round(bttsYes)}%). Habrá espacios.`;
         else textoAnalisis = `Partido cerrado y táctico. Ambos priorizan el orden defensivo.`;
 
-        // --- RECOMENDACIÓN FINAL ---
         let comb1X = Math.min(probWinL + probDraw, 98);
         let combX2 = Math.min(probWinV + probDraw, 98);
         let combLocalOver15 = (probWinL * probOver15) / 100;
@@ -238,7 +244,6 @@ function analizarPartido(local, visita, fechaISO) {
             { nombre: `Combinada: Ambos Marcan + Más de 2.5 Goles`, valor: combBTTS_Over25 }
         ];
 
-        // Buscamos la mejor línea de córners y tarjetas
         for(let l=3.5; l<=10.5; l+=1) {
             let p = getOverProb(l, lambdaCornersT);
             if(p >= 50) todasLasOpciones.push({ nombre: `Más de ${l} Córners Totales`, valor: p });
@@ -254,16 +259,14 @@ function analizarPartido(local, visita, fechaISO) {
         let nivelConfianza = mejorOpcion.valor >= 75 ? "ALTA" : (mejorOpcion.valor >= 60 ? "MEDIA" : "BAJA");
         let colorConfianza = nivelConfianza === "ALTA" ? "#10b981" : (nivelConfianza === "MEDIA" ? "#f59e0b" : "#ef4444");
 
-        // Generamos las tablas de líneas
         let tablaCorners = generarTablaLineas(lambdaCornersL, lambdaCornersV, 10.5);
         let tablaCards = generarTablaLineas(lambdaCardsL, lambdaCardsV, 8.5);
 
-        // --- DISEÑO HTML CON PESTAÑAS ---
         listaDiv.innerHTML = `
             <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:15px; padding:10px;">← Volver a Partidos</button>
             
             <div class="match-card" style="padding: 15px 10px;">
-                <!-- CABECERA DEL PARTIDO -->
+                
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div style="text-align: center; width: 42%;"><h3 style="font-size: 14px; margin: 0; line-height: 1.2;">${local}</h3></div>
                     <div style="text-align: center; width: 16%;"><span style="font-size: 18px; font-weight: 900; color: #94a3b8;">VS</span></div>
@@ -272,16 +275,16 @@ function analizarPartido(local, visita, fechaISO) {
 
                 <!-- BOTONES DE LAS PESTAÑAS -->
                 <div style="display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px;">
-                    <button class="tab-btn active-tab" onclick="cambiarPestana('principal', this)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; font-size: 12px; white-space: nowrap; cursor: pointer;">🏆 Principal</button>
-                    <button class="tab-btn" onclick="cambiarPestana('goles', this)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; font-size: 12px; white-space: nowrap; cursor: pointer;">⚽ Goles</button>
-                    <button class="tab-btn" onclick="cambiarPestana('corners', this)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; font-size: 12px; white-space: nowrap; cursor: pointer;">🚩 Córners</button>
-                    <button class="tab-btn" onclick="cambiarPestana('cards', this)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; font-size: 12px; white-space: nowrap; cursor: pointer;">🟨 Tarjetas</button>
+                    <button id="btn-tab-principal" onclick="cambiarPestana('principal')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 12px; background: #10b981; color: white; white-space: nowrap; cursor: pointer;">🏆 Principal</button>
+                    <button id="btn-tab-goles" onclick="cambiarPestana('goles')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 12px; background: white; color: #1e3a8a; white-space: nowrap; cursor: pointer;">⚽ Goles</button>
+                    <button id="btn-tab-corners" onclick="cambiarPestana('corners')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 12px; background: white; color: #1e3a8a; white-space: nowrap; cursor: pointer;">🚩 Córners</button>
+                    <button id="btn-tab-cards" onclick="cambiarPestana('cards')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 12px; background: white; color: #1e3a8a; white-space: nowrap; cursor: pointer;">🟨 Tarjetas</button>
                 </div>
 
                 <!-- PESTAÑA 1: PRINCIPAL -->
-                <div id="tab-principal" class="tab-content" style="display: block;">
+                <div id="tab-principal" style="display: block;">
                     <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 2px solid #f59e0b; text-align: center;">
-                        <h4 style="color: #f59e0b; font-size: 14px; margin-bottom: 10px;">RECOMENDACIÓN FINAL GLOBAL</h4>
+                        <h4 style="color: #f59e0b; font-size: 14px; margin-bottom: 10px;">RECOMENDACIÓN FINAL</h4>
                         <p style="color: white; font-size: 18px; font-weight: 900; margin-bottom: 5px;">${mejorOpcion.nombre}</p>
                         <p style="color: #10b981; font-size: 15px; font-weight: bold; margin-bottom: 10px;">${Math.round(mejorOpcion.valor)}% de prob.</p>
                         <span style="background: ${colorConfianza}20; color: ${colorConfianza}; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid ${colorConfianza};">CONFIANZA: ${nivelConfianza}</span>
@@ -305,7 +308,7 @@ function analizarPartido(local, visita, fechaISO) {
                 </div>
 
                 <!-- PESTAÑA 2: GOLES -->
-                <div id="tab-goles" class="tab-content" style="display: none;">
+                <div id="tab-goles" style="display: none;">
                     <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Mercados de Goles</h4>
                     <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
                         ${crearBarraProbabilidad("Más de 1.5 Goles Totales", probOver15)}
@@ -313,7 +316,7 @@ function analizarPartido(local, visita, fechaISO) {
                         ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
                     </div>
                     
-                    <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🔗 Opciones Combinadas</h4>
+                    <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🔗 Combinadas</h4>
                     <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         ${crearBarraProbabilidad(`${local} o Empate (1X)`, comb1X)}
                         ${crearBarraProbabilidad(`${visita} o Empate (X2)`, combX2)}
@@ -324,7 +327,7 @@ function analizarPartido(local, visita, fechaISO) {
                 </div>
 
                 <!-- PESTAÑA 3: CÓRNERS -->
-                <div id="tab-corners" class="tab-content" style="display: none;">
+                <div id="tab-corners" style="display: none;">
                     <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Líneas de Córners (1.5 a 10.5)</h4>
                     <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         ${tablaCorners}
@@ -332,7 +335,7 @@ function analizarPartido(local, visita, fechaISO) {
                 </div>
 
                 <!-- PESTAÑA 4: TARJETAS -->
-                <div id="tab-cards" class="tab-content" style="display: none;">
+                <div id="tab-cards" style="display: none;">
                     <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🟨 Líneas de Tarjetas (1.5 a 8.5)</h4>
                     <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         ${tablaCards}
@@ -343,6 +346,4 @@ function analizarPartido(local, visita, fechaISO) {
         `;
     } catch(e) {
         listaDiv.innerHTML = `
-            <button class="btn" onclick="cargarPartidos()" style="background:#64748b; margin-bottom:20px;">← Volver</button>
-            <div style="background: #fee2e2; padding: 20px; border-radius: 8px; color: #b91c1c;">
-                <h3>Error en el análisis</h3><p>${e.message
+           
