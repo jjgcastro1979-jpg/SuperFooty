@@ -3,472 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SUPERFOOTY — Análisis de Partidos</title>
+    <title>SuperFooty | Análisis IA</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
+        :root {
+            --primary: #1e3a8a;
+            --accent: #10b981;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
         }
-
-        body {
-            background: #f0f4f8;
-            color: #1a1a2e;
-            min-height: 100vh;
-            padding-bottom: 80px;
-        }
-
-        /* Cabecera */
-        .header {
-            background: linear-gradient(135deg, #0a2342 0%, #1e5799 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .header span {
-            color: #4cd137;
-        }
-
-        .match-header {
-            background: white;
-            margin: 15px;
-            border-radius: 16px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .teams {
-            font-size: 26px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #0a2342;
-        }
-
-        .date {
-            color: #666;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-
-        .xg-box {
-            background: #0a2342;
-            color: #4cd137;
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        /* Botones de pestañas */
-        .tabs-container {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            padding: 0 15px 15px;
-            flex-wrap: wrap;
-        }
-
-        .tab-btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: #e0e7ef;
-            color: #333;
-        }
-
-        .tab-btn.active {
-            background: #1e5799;
-            color: white;
-            box-shadow: 0 3px 8px rgba(30, 87, 153, 0.3);
-        }
-
-        .tab-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Contenido */
-        .content-container {
-            margin: 0 15px 20px;
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        h2 {
-            font-size: 20px;
-            color: #0a2342;
-            margin-bottom: 20px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #1e5799;
-        }
-
-        h3 {
-            font-size: 17px;
-            color: #333;
-            margin: 20px 0 12px;
-        }
-
-        /* Barras de probabilidad */
-        .prob-row {
-            display: flex;
-            align-items: center;
-            margin: 12px 0;
-        }
-
-        .prob-label {
-            width: 180px;
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        .prob-bar-container {
-            flex: 1;
-            height: 14px;
-            background: #e8e8e8;
-            border-radius: 7px;
-            overflow: hidden;
-            margin: 0 10px;
-        }
-
-        .prob-bar {
-            height: 100%;
-            border-radius: 7px;
-            transition: width 0.5s ease;
-        }
-
-        .prob-value {
-            width: 55px;
-            text-align: right;
-            font-weight: bold;
-            font-size: 15px;
-        }
-
-        .green { background: #4cd137; color: #155724; }
-        .yellow { background: #f9c80e; color: #856404; }
-        .red { background: #e63946; color: white; }
-
-        /* Dos columnas para córners/tarjetas individuales */
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .team-card {
-            background: #f0f4f8;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .team-card h4 {
-            color: #1e5799;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        /* Caja de análisis táctico */
-        .analysis-box {
-            background: #e8f5e9;
-            border-left: 4px solid #4cd137;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 16px;
-            line-height: 1.6;
-            color: #2e7d32;
-        }
-
-        /* Recomendación final */
-        .recommendation-box {
-            background: linear-gradient(135deg, #0a2342 0%, #1e5799 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 16px;
-            text-align: center;
-            margin-top: 25px;
-        }
-
-        .recommendation-box h2 {
-            color: #f9c80e;
-            border: none;
-            font-size: 24px;
-        }
-
-        .recommendation-main {
-            font-size: 22px;
-            font-weight: bold;
-            margin: 15px 0;
-        }
-
-        .confianza {
-            display: inline-block;
-            background: #f9c80e;
-            color: #0a2342;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        /* Navegación inferior */
-        .nav-bottom {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
-
-        .nav-item {
-            flex: 1;
-            text-align: center;
-            color: #777;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .nav-item.active {
-            color: #1e5799;
-            font-weight: bold;
-        }
-
-        .nav-icon {
-            font-size: 22px;
-            margin-bottom: 4px;
-        }
-
-        /* H2H y Temporada */
-        .h2h-grid {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 10px;
-            text-align: center;
-            margin: 15px 0;
-        }
-
-        .team-side {
-            padding: 10px;
-            background: #e8f0f8;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .vs-middle {
-            color: #888;
-            font-weight: bold;
-        }
-
-        .last-h2h {
-            margin-top: 15px;
-        }
-
-        .h2h-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--light); color: var(--dark); padding-bottom: 70px; }
+        
+        header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: center; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .logo { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+        .logo span { color: var(--accent); }
+        
+        nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; border-top: 1px solid #e2e8f0; }
+        nav a { color: var(--gray); text-decoration: none; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        nav a.active { color: var(--primary); }
+        
+        .page { display: none; padding: 20px; max-width: 800px; margin: 0 auto; animation: fadeIn 0.4s ease-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--dark); border-left: 5px solid var(--accent); padding-left: 10px;}
+        
+        .match-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; transition: transform 0.2s; cursor: pointer; }
+        .match-card:active { transform: scale(0.98); }
+        .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .league-badge { background: #e0e7ff; color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .match-time { color: var(--gray); font-size: 13px; font-weight: bold; }
+        .teams-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .team-name { font-size: 16px; font-weight: bold; width: 40%; }
+        .team-name.right { text-align: right; }
+        .vs-badge { background: var(--dark); color: white; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
+        
+        .btn { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 15px; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .btn:active { background: #059669; }
+        
+        .loader { text-align: center; font-weight: bold; color: var(--primary); padding: 30px; }
+        
+        select, input[type="date"] { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; background: white; font-size: 15px; font-weight: bold; color: var(--dark); }
     </style>
 </head>
 <body>
+    <header>
+        <div class="logo">⚽ SUPER<span>FOOTY</span></div>
+    </header>
 
-<!-- Cabecera Principal -->
-<div class="header">
-    ⚽ SUPER<span>FOOTY</span>
-</div>
+    <main id="inicio" class="page active">
+        <div style="background: linear-gradient(135deg, var(--primary), #3b82f6); color: white; padding: 30px; border-radius: 20px; text-align: center; margin-bottom: 20px;">
+            <h1 style="font-size: 28px; margin-bottom: 10px;">Bienvenido a SuperFooty</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Analiza y predice los partidos con Inteligencia Artificial.</p>
+            <button class="btn" onclick="showPage('partidos')" style="background:white; color:var(--primary); box-shadow:none;">Empezar a Analizar</button>
+        </div>
+    </main>
 
-<!-- Cabecera del Partido -->
-<div class="match-header">
-    <div class="teams" id="teamNames">Sevilla FC vs Deportivo Alavés</div>
-    <div class="date" id="matchDate">📅 06 de Noviembre</div>
-    <div class="xg-box" id="xgBox">
-        📊 Goles Esperados (xG): 1.72 — 1.56
-    </div>
-</div>
-
-<!-- Botones de Pestañas -->
-<div class="tabs-container">
-    <button class="tab-btn active" onclick="openTab('principal')">🔵 Principal</button>
-    <button class="tab-btn" onclick="openTab('goles')">⚽ Goles</button>
-    <button class="tab-btn" onclick="openTab('corners')">🚩 Córners</button>
-    <button class="tab-btn" onclick="openTab('tarjetas')">🟨 Tarjetas</button>
-</div>
-
-<!-- Contenido de Pestañas -->
-<div class="content-container">
-
-    <!-- ========== PESTAÑA PRINCIPAL ========== -->
-    <div id="principal" class="tab-content active">
-        <h2>📈 Temporada y Enfrentamientos Directos (H2H)</h2>
+    <main id="partidos" class="page">
+        <h2>Partidos y Análisis</h2>
         
-        <div class="h2h-grid">
-            <div class="team-side">
-                Sevilla FC<br>
-                <strong>4V - 3E - 7D</strong>
-            </div>
-            <div class="vs-middle">VS</div>
-            <div class="team-side">
-                Deportivo Alavés<br>
-                <strong>4V - 3E - 7D</strong>
-            </div>
-        </div>
+        <select id="league-select">
+            <option value="esp.1">La Liga (España)</option>
+            <option value="eng.1">Premier League (Inglaterra)</option>
+            <option value="ita.1">Serie A (Italia)</option>
+            <option value="ger.1">Bundesliga (Alemania)</option>
+            <option value="fra.1">Ligue 1 (Francia)</option>
+        </select>
 
-        <h3>Últimos enfrentamientos directos:</h3>
-        <div class="last-h2h">
-            <div class="h2h-item"><span>Sevilla 2 - 1 Alavés</span><span>23 may</span></div>
-            <div class="h2h-item"><span>Alavés 1 - 1 Sevilla</span><span>10 ene</span></div>
-            <div class="h2h-item"><span>Sevilla 3 - 0 Alavés</span><span>15 sep</span></div>
-            <div class="h2h-item"><span>Alavés 0 - 1 Sevilla</span><span>02 mar</span></div>
-            <div class="h2h-item"><span>Sevilla 2 - 2 Alavés</span><span>20 nov</span></div>
-        </div>
+        <!-- He dejado el input de fecha pero tu JS actual no lo usa, busca los próximos partidos -->
+        <input type="date" id="date-select">
 
-        <div class="analysis-box">
-            <strong>📝 Análisis Táctico:</strong><br>
-            Se espera un partido abierto. Ambos equipos tienen alta probabilidad de anotar (65%). Los espacios en defensa serán clave. Sevilla parte con ligera ventaja ofensiva, pero Alavés ha demostrado ser competente en ataque fuera de casa.
+        <div id="lista-partidos">
+            <div class="loader">Elige una liga y pulsa Generar...</div>
         </div>
-
-        <h2 style="margin-top: 25px;">📊 Probabilidades 1X2</h2>
-        <div class="prob-row">
-            <div class="prob-label">Victoria Sevilla FC</div>
-            <div class="prob-bar-container"><div class="prob-bar yellow" style="width: 41%"></div></div>
-            <div class="prob-value">41%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">Empate</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 23%"></div></div>
-            <div class="prob-value">23%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">Victoria Alavés</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 35%"></div></div>
-            <div class="prob-value">35%</div>
-        </div>
-
-        <!-- Recomendación Final -->
-        <div class="recommendation-box">
-            <h2>🏆 RECOMENDACIÓN FINAL GLOBAL</h2>
-            <p>La opción con mayor probabilidad estadística es:</p>
-            <div class="recommendation-main">✅ Ambos Equipos Marcan (SÍ)</div>
-            <div style="font-size: 18px; color: #4cd137; font-weight: bold;">65% de probabilidad</div>
-            <div class="confianza">CONFIANZA: MEDIA</div>
-        </div>
-    </div>
-
-    <!-- ========== PESTAÑA GOLES ========== -->
-    <div id="goles" class="tab-content">
-        <h2>⚽ Total de Goles — Más de...</h2>
         
-        <div class="prob-row">
-            <div class="prob-label">+1.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar green" style="width: 84%"></div></div>
-            <div class="prob-value">84%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+2.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar yellow" style="width: 64%"></div></div>
-            <div class="prob-value">64%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+3.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar yellow" style="width: 43%"></div></div>
-            <div class="prob-value">43%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+4.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 26%"></div></div>
-            <div class="prob-value">26%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+5.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 14%"></div></div>
-            <div class="prob-value">14%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+6.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 7%"></div></div>
-            <div class="prob-value">7%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+7.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 3%"></div></div>
-            <div class="prob-value">3%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+8.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 1%"></div></div>
-            <div class="prob-value">1%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+9.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 0.5%"></div></div>
-            <div class="prob-value">&lt;1%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+10.5 Goles</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 0.1%"></div></div>
-            <div class="prob-value">&lt;1%</div>
-        </div>
+        <br>
+        <button class="btn" onclick="cargarPartidos()">🔄 Generar Partidos</button>
+    </main>
 
-        <h3 style="margin-top: 25px;">✅ Ambos Equipos Marcan</h3>
-        <div class="prob-row">
-            <div class="prob-label">SÍ</div>
-            <div class="prob-bar-container"><div class="prob-bar yellow" style="width: 65%"></div></div>
-            <div class="prob-value">65%</div>
+    <main id="equipos" class="page">
+        <h2>Equipos</h2>
+        <div class="match-card">
+            <h3>🛡️ Base de Datos</h3>
+            <p style="font-size:13px; color:#64748b; margin-top:5px;">Próximamente podrás buscar cualquier equipo del mundo.</p>
         </div>
-        <div class="prob-row">
-            <div class="prob-label">NO</div>
-            <div class="prob-bar-container"><div class="prob-bar red" style="width: 35%"></div></div>
-            <div class="prob-value">35%</div>
-        </div>
+    </main>
 
-        <div class="recommendation-box" style="margin-top: 25px;">
-            <h2>🏆 RECOMENDACIÓN — Goles</h2>
-            <div class="recommendation-main">Más de 1.5 Goles</div>
-            <div style="font-size: 18px; color: #4cd137; font-weight: bold;">84% — MUY ALTA</div>
-        </div>
-    </div>
+    <nav>
+        <a id="nav-inicio" class="active" onclick="showPage('inicio')">🏠 <span>Inicio</span></a>
+        <a id="nav-partidos" onclick="showPage('partidos')">⚽ <span>Partidos IA</span></a>
+        <a id="nav-equipos" onclick="showPage('equipos')">🛡️ <span>Equipos</span></a>
+    </nav>
 
-    <!-- ========== PESTAÑA CÓRNERS ========== -->
-    <div id="corners" class="tab-content">
-        <h2>🚩 Total de Córners — Más de...</h2>
-        
-        <div class="prob-row">
-            <div class="prob-label">+1.5 Córners</div>
-            <div class="prob-bar-container"><div class="prob-bar green" style="width: 92%"></div></div>
-            <div class="prob-value">92%</div>
-        </div>
-        <div class="prob-row">
-            <div class="prob-label">+2.5 Córners</div>
-            <div class="prob-bar-container"><div class="prob-bar green" style="width: 85%"></div></div>
-            <div class="prob-value">85%</div
-                                           
+    <script src="app.js"></script>
+    
+    <script>
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('nav a').forEach(nav => nav.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.getElementById('nav-' + pageId).classList.add('active');
+            
+            if(pageId === 'partidos' && document.getElementById('lista-partidos').innerHTML.includes('Elige una liga')) {
+                let hoy = new Date();
+                let year = hoy.getFullYear();
+                let month = String(hoy.getMonth() + 1).padStart(2, '0');
+                let day = String(hoy.getDate()).padStart(2, '0');
+                document.getElementById('date-select').value = `${year}-${month}-${day}`;
+            }
+        }
+    </script>
+</body>
+</html>
