@@ -76,7 +76,7 @@ function cambiarPestana(idTab) {
     document.getElementById('tab-corners').style.display = 'none';
     document.getElementById('tab-cards').style.display = 'none';
     
-    // Quitar el color azul a todos los botones
+    // Quitar el color a todos los botones
     document.getElementById('btn-tab-principal').style.background = '#f8fafc';
     document.getElementById('btn-tab-principal').style.color = '#1e3a8a';
     document.getElementById('btn-tab-goles').style.background = '#f8fafc';
@@ -233,7 +233,7 @@ function analizarPartido(local, visita, fechaISO) {
         textoAnalisis = `Partido muy táctico y cerrado. Tanto ${local} como ${visita} priorizan el orden defensivo. El historial reciente muestra tendencia a marcadores cortos.`;
     }
 
-    // --- 🏆 MOTOR DE RECOMENDACIÓN FINAL ---
+    // --- MOTOR DE RECOMENDACIÓN FINAL ---
     let todasLasOpciones = [
         { nombre: `Victoria ${local}`, valor: probWinL },
         { nombre: `Empate`, valor: probDraw },
@@ -263,8 +263,7 @@ function analizarPartido(local, visita, fechaISO) {
         
         <div class="match-card" style="padding: 20px 15px;">
             
-            <!-- CABECERA DEL PARTIDO -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                 <div style="text-align: center; width: 42%;"><h3 style="font-size: 15px; margin: 0; line-height: 1.2;">${local}</h3></div>
                 <div style="text-align: center; width: 16%; display: flex; align-items: center; justify-content: center;"><span style="font-size: 20px; font-weight: 900; color: #94a3b8;">VS</span></div>
                 <div style="text-align: center; width: 42%;"><h3 style="font-size: 15px; margin: 0; line-height: 1.2;">${visita}</h3></div>
@@ -279,7 +278,7 @@ function analizarPartido(local, visita, fechaISO) {
                 <button id="btn-tab-cards" onclick="cambiarPestana('cards')" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 12px; background: #f8fafc; color: #1e3a8a; white-space: nowrap; cursor: pointer;">🟨 Tarjetas</button>
             </div>
 
-            <!-- ================= PESTAÑA 1: PRINCIPAL ================= -->
+            <!-- PESTAÑA 1: PRINCIPAL -->
             <div id="tab-principal" style="display: block;">
                 <div style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 2px solid #f59e0b; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
                     <h4 style="color: #f59e0b; font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 10px;">
@@ -306,6 +305,29 @@ function analizarPartido(local, visita, fechaISO) {
                     <p style="color: #10b981; font-size: 14px; font-weight: 900;">Goles Esperados (xG): ${xgL.toFixed(2)} - ${xgV.toFixed(2)}</p>
                 </div>
 
+                <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">📈 Temporada y H2H</h4>
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div style="width: 45%; text-align: center;">
+                            <p style="font-weight: bold; color: var(--primary); margin-bottom: 5px;">${local}</p>
+                            <p style="font-size: 12px; color: #475569;">${winL}V - ${drawL}E - ${lossL}D</p>
+                        </div>
+                        <div style="width: 10%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #cbd5e1;">|</div>
+                        <div style="width: 45%; text-align: center;">
+                            <p style="font-weight: bold; color: #ef4444; margin-bottom: 5px;">${visita}</p>
+                            <p style="font-size: 12px; color: #475569;">${winV}V - ${drawV}E - ${lossV}D</p>
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid #cbd5e1; padding-top: 10px; text-align: center;">
+                        <p style="font-size: 12px; font-weight: bold; color: #334155; margin-bottom: 5px;">Últimos enfrentamientos:</p>
+                        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; align-items: center;">
+                            <span style="color: #10b981;">${local}: ${h2hL} Victorias</span>
+                            <span style="color: #f59e0b;">Empates: ${h2hE}</span>
+                            <span style="color: #ef4444;">${visita}: ${h2hV} Victorias</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:15px; border-radius:12px; margin-bottom: 20px;">
                     <p style="color:#14532d; font-size:13px; line-height:1.6; margin: 0;"><strong>Análisis Táctico:</strong> ${textoAnalisis}</p>
                 </div>
@@ -318,27 +340,6 @@ function analizarPartido(local, visita, fechaISO) {
                 </div>
             </div>
 
-            <!-- ================= PESTAÑA 2: GOLES ================= -->
+            <!-- PESTAÑA 2: GOLES -->
             <div id="tab-goles" style="display: none;">
-                <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">⚽ Mercados de Goles</h4>
-                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                    ${crearBarraProbabilidad("Más de 1.5 Goles Totales", probOver15)}
-                    ${crearBarraProbabilidad("Más de 2.5 Goles Totales", probOver25)}
-                    ${crearBarraProbabilidad("Ambos Equipos Marcan (SÍ)", bttsYes)}
-                </div>
-
-                <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🔗 Opciones Combinadas</h4>
-                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                    ${crearBarraProbabilidad(`${local} o Empate (1X)`, comb1X)}
-                    ${crearBarraProbabilidad(`${visita} o Empate (X2)`, combX2)}
-                    ${crearBarraProbabilidad(`Gana ${local} + Más de 1.5 Goles`, combLocalOver15)}
-                    ${crearBarraProbabilidad(`Gana ${visita} + Más de 1.5 Goles`, combVisitaOver15)}
-                    ${crearBarraProbabilidad(`Ambos Marcan + Más de 2.5 Goles`, combBTTS_Over25)}
-                </div>
-            </div>
-
-            <!-- ================= PESTAÑA 3: CÓRNERS ================= -->
-            <div id="tab-corners" style="display: none;">
-                <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; font-size: 13px;">🚩 Córners (Individual)</h4>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <div style="flex: 1; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid
+                <h4 style="margin-bottom: 10px; color: var(--primary); border-bottom
