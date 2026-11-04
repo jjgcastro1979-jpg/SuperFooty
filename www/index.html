@@ -1,3 +1,396 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SuperFooty PRO</title>
+
+<style>
+:root {
+    --primary:#1e3a8a;
+    --accent:#10b981;
+    --dark:#0f172a;
+    --light:#f8fafc;
+    --gray:#64748b;
+    --yellow:#eab308;
+    --red:#ef4444;
+}
+
+* {
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body {
+    background:var(--light);
+    color:var(--dark);
+    padding-bottom:80px;
+}
+
+header {
+    background:var(--primary);
+    color:white;
+    padding:18px;
+    text-align:center;
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+
+.logo {
+    font-size:23px;
+    font-weight:900;
+}
+
+.logo span {
+    color:var(--accent);
+}
+
+.page {
+    display:none;
+    padding:20px;
+    max-width:800px;
+    margin:auto;
+}
+
+.page.active {
+    display:block;
+}
+
+h2 {
+    font-size:21px;
+    margin-bottom:20px;
+    border-left:5px solid var(--accent);
+    padding-left:10px;
+}
+
+.match-card {
+    background:white;
+    border-radius:15px;
+    padding:18px;
+    margin-bottom:14px;
+    border:1px solid #e2e8f0;
+    box-shadow:0 4px 12px #00000008;
+}
+
+.match-card.clickable {
+    cursor:pointer;
+}
+
+.match-header {
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:15px;
+    gap:8px;
+    font-size:12px;
+    color:var(--gray);
+}
+
+.league-badge {
+    background:#dbeafe;
+    color:var(--primary);
+    padding:5px 9px;
+    border-radius:15px;
+    font-weight:bold;
+}
+
+.teams-row {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+}
+
+.team-name {
+    width:42%;
+    font-weight:bold;
+    font-size:14px;
+}
+
+.team-name.right {
+    text-align:right;
+}
+
+.vs-badge {
+    background:var(--dark);
+    color:white;
+    padding:7px;
+    border-radius:8px;
+    font-size:12px;
+}
+
+.btn {
+    width:100%;
+    padding:14px;
+    border:0;
+    border-radius:10px;
+    background:var(--accent);
+    color:white;
+    font-weight:bold;
+    font-size:15px;
+    cursor:pointer;
+}
+
+select,input {
+    width:100%;
+    padding:13px;
+    border:1px solid #cbd5e1;
+    border-radius:9px;
+    margin-bottom:13px;
+    background:white;
+    font-size:15px;
+}
+
+.loader {
+    text-align:center;
+    padding:30px;
+    color:var(--primary);
+    font-weight:bold;
+}
+
+.analysis-tabs {
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+    margin:15px 0;
+}
+
+.analysis-tab {
+    background:#e2e8f0;
+    padding:11px 13px;
+    border-radius:8px;
+    font-size:12px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.analysis-tab.active {
+    background:var(--primary);
+    color:white;
+}
+
+.analysis-content {
+    display:none;
+}
+
+.analysis-content.active {
+    display:block;
+}
+
+.team-columns {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+
+.team-column {
+    background:white;
+    border:1px solid #e2e8f0;
+    padding:12px;
+    border-radius:10px;
+    min-width:0;
+}
+
+.team-column h3 {
+    font-size:13px;
+    text-align:center;
+    margin-bottom:15px;
+    overflow-wrap:anywhere;
+}
+
+.stat-row {
+    margin-bottom:13px;
+}
+
+.stat-label {
+    display:flex;
+    justify-content:space-between;
+    gap:5px;
+    font-size:11px;
+    font-weight:bold;
+    margin-bottom:5px;
+}
+
+.bar-container {
+    height:9px;
+    background:#e2e8f0;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.bar-fill {
+    height:100%;
+    border-radius:10px;
+}
+
+.green {background:var(--accent);}
+.yellow {background:var(--yellow);}
+.red {background:var(--red);}
+
+.recommendation-box {
+    background:#dcfce7;
+    border:1px solid #86efac;
+    padding:18px;
+    border-radius:12px;
+    text-align:center;
+    margin-top:18px;
+}
+
+.recommendation-box h4 {
+    color:#166534;
+    margin-bottom:10px;
+}
+
+.recommendation-box .value {
+    font-size:19px;
+    font-weight:900;
+    color:#15803d;
+}
+
+.confianza {
+    margin-top:8px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.back-btn {
+    color:var(--primary);
+    font-weight:bold;
+    cursor:pointer;
+    margin-bottom:15px;
+}
+
+.notice {
+    background:#fff7ed;
+    color:#9a3412;
+    border:1px solid #fed7aa;
+    padding:12px;
+    border-radius:9px;
+    font-size:12px;
+    margin-bottom:15px;
+}
+
+nav {
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:13px;
+    border-top:1px solid #e2e8f0;
+    z-index:100;
+}
+
+nav a {
+    text-align:center;
+    font-size:12px;
+    color:var(--gray);
+    cursor:pointer;
+    font-weight:bold;
+}
+
+nav a.active {
+    color:var(--primary);
+}
+
+@media(max-width:380px) {
+    .team-columns {gap:7px;}
+    .team-column {padding:8px;}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">⚽ SUPER<span>FOOTY PRO</span></div>
+</header>
+
+<main id="inicio" class="page active">
+
+    <div style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:white;padding:30px;border-radius:18px;text-align:center">
+
+        <h1>SUPERFOOTY PRO</h1>
+
+        <p style="margin:15px 0">
+            Análisis matemático y estadísticas de fútbol.
+        </p>
+
+        <button class="btn"
+        style="background:white;color:#1e3a8a"
+        onclick="showPage('partidos')">
+        EMPEZAR A ANALIZAR
+        </button>
+
+    </div>
+
+</main>
+
+<main id="partidos" class="page">
+
+    <h2>Partidos y análisis</h2>
+
+    <select id="league-select">
+        <option value="esp.1">La Liga</option>
+        <option value="eng.1">Premier League</option>
+        <option value="ita.1">Serie A</option>
+        <option value="ger.1">Bundesliga</option>
+        <option value="fra.1">Ligue 1</option>
+    </select>
+
+    <input type="date" id="date-select">
+
+    <button class="btn" id="btn-generar">
+        🔄 GENERAR PARTIDOS
+    </button>
+
+    <div id="lista-partidos">
+        <div class="loader">Selecciona una liga y una fecha.</div>
+    </div>
+
+</main>
+
+<main id="analisis" class="page">
+
+    <div class="back-btn" onclick="showPage('partidos')">
+        ← Volver a partidos
+    </div>
+
+    <h2 id="match-name">Análisis del partido</h2>
+
+    <div id="analysis-date" style="margin-bottom:15px;color:#64748b;font-size:12px"></div>
+
+    <div class="analysis-tabs">
+
+        <div class="analysis-tab active" data-tab="general">📊 General</div>
+
+        <div class="analysis-tab" data-tab="goles">⚽ Goles</div>
+
+        <div class="analysis-tab" data-tab="corners">🚩 Córners</div>
+
+        <div class="analysis-tab" data-tab="tarjetas">🟨 Tarjetas</div>
+
+    </div>
+
+    <div id="tab-general" class="analysis-content active">
+
+        <div id="general-content"></div>
+
+    </div>
+
+    <div id="tab-goles" class="analysis-content">
+
+        <div id="goles-content"></div>
+
+    </div>
+
+    <div id="tab-corners" class="analysis-content">
+
         <div id="corners-content"></div>
 
     </div>
@@ -45,4 +438,4 @@
 <script src="app.js" defer></script>
 
 </body>
-  </html>
+</html>
