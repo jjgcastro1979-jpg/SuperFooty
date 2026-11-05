@@ -4,663 +4,369 @@
 // SUPERFOOTY PRO - MOTOR PRINCIPAL
 // ==========================================
 
-// TU PUENTE CLOUDFLARE
-const PROXY_URL =
-    'https://royal-dream-9429.jjgcastro1979.workers.dev';
+const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
 
 const ligasFootballData = {
-    'esp.1': { nombre: 'La Liga', slug: 'PD' },
-    'eng.1': { nombre: 'Premier League', slug: 'PL' },
-    'ita.1': { nombre: 'Serie A', slug: 'SA' },
-    'ger.1': { nombre: 'Bundesliga', slug: 'BL1' },
-    'fra.1': { nombre: 'Ligue 1', slug: 'FL1' }
+ 'esp.1':{nombre:'La Liga',slug:'PD'},
+ 'eng.1':{nombre:'Premier League',slug:'PL'},
+ 'ita.1':{nombre:'Serie A',slug:'SA'},
+ 'ger.1':{nombre:'Bundesliga',slug:'BL1'},
+ 'fra.1':{nombre:'Ligue 1',slug:'FL1'}
 };
-
-// ==========================================
-// FUERZAS ORIENTATIVAS
-// No son estadísticas actuales de temporada.
-// ==========================================
 
 const equiposData = {
-    'Real Madrid': { atk: 2.1, def: 0.8 },
-    'Barcelona': { atk: 2.0, def: 1.0 },
-    'Atletico': { atk: 1.6, def: 0.7 },
-    'Athletic': { atk: 1.4, def: 0.9 },
-    'Real Sociedad': { atk: 1.3, def: 1.0 },
-    'Betis': { atk: 1.3, def: 1.2 },
-    'Sevilla': { atk: 1.1, def: 1.3 },
-    'Valencia': { atk: 1.1, def: 1.2 },
-    'Villarreal': { atk: 1.5, def: 1.3 },
-    'Getafe': { atk: 0.8, def: 1.1 },
-    'Osasuna': { atk: 1.0, def: 1.1 },
-    'Elche': { atk: 0.9, def: 1.2 },
-    'Man City': { atk: 2.2, def: 0.9 },
-    'Arsenal': { atk: 1.9, def: 0.8 },
-    'Liverpool': { atk: 1.8, def: 1.0 },
-    'Chelsea': { atk: 1.5, def: 1.1 },
-    'Man United': { atk: 1.3, def: 1.2 },
-    'Tottenham': { atk: 1.5, def: 1.3 }
+ 'Real Madrid':{atk:2.1,def:.8},
+ 'Barcelona':{atk:2,def:1},
+ 'Atletico':{atk:1.6,def:.7},
+ 'Athletic':{atk:1.4,def:.9},
+ 'Real Sociedad':{atk:1.3,def:1},
+ 'Betis':{atk:1.3,def:1.2},
+ 'Sevilla':{atk:1.1,def:1.3},
+ 'Valencia':{atk:1.1,def:1.2},
+ 'Villarreal':{atk:1.5,def:1.3},
+ 'Getafe':{atk:.8,def:1.1},
+ 'Osasuna':{atk:1,def:1.1},
+ 'Man City':{atk:2.2,def:.9},
+ 'Arsenal':{atk:1.9,def:.8},
+ 'Liverpool':{atk:1.8,def:1},
+ 'Chelsea':{atk:1.5,def:1.1},
+ 'Man United':{atk:1.3,def:1.2},
+ 'Tottenham':{atk:1.5,def:1.3}
 };
 
-const defaultTeam = { atk: 1.2, def: 1.2 };
+const defaultTeam={atk:1.2,def:1.2};
+let partidosActuales=[];
+let analisisActual=null;
 
-let partidosActuales = [];
-
-// ==========================================
-// UTILIDADES
-// ==========================================
-
-function escapeHTML(value) {
-    return String(value ?? '').replace(/[&<>"']/g, function(c) {
-        return {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[c];
-    });
+function escapeHTML(v){
+ return String(v??'').replace(/[&<>"']/g,c=>({
+ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+ }[c]));
 }
 
-function obtenerFuerza(nombre) {
-    const normalizar = texto => texto
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-
-    const buscado = normalizar(nombre);
-
-    for (const key in equiposData) {
-        if (buscado.includes(normalizar(key))) {
-            return equiposData[key];
-        }
-    }
-
-    return defaultTeam;
+function normalizarTexto(t){
+ return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 
-function factorial(n) {
-    let resultado = 1;
-
-    for (let i = 2; i <= n; i++) {
-        resultado *= i;
-    }
-
-    return resultado;
+function obtenerFuerza(nombre){
+ const n=normalizarTexto(nombre);
+ for(const k in equiposData){
+  if(n.includes(normalizarTexto(k)))return equiposData[k];
+ }
+ return defaultTeam;
 }
 
-function poisson(k, lambda) {
-    return Math.exp(-lambda) *
-        Math.pow(lambda, k) / factorial(k);
+function factorial(n){
+ let r=1;
+ for(let i=2;i<=n;i++)r*=i;
+ return r;
 }
 
-function porcentaje(valor) {
-    return Math.max(0, Math.min(100, valor * 100));
+function poisson(k,l){
+ return Math.exp(-l)*Math.pow(l,k)/factorial(k);
 }
 
-function crearBarraProbabilidad(titulo, valor) {
-    const prob = Math.max(0, Math.min(100, valor));
-    let color = '#ef4444';
+function pct(v){
+ return Math.max(0,Math.min(100,v*100));
+}
 
-    if (prob >= 65) color = '#10b981';
-    else if (prob >= 45) color = '#f59e0b';
-
-    return `
-        <div class="chart-row">
-            <div class="chart-label">
-                <span>${escapeHTML(titulo)}</span>
-                <span style="color:${color}">
-                    ${prob.toFixed(1)}%
-                </span>
-            </div>
-
-            <div class="chart-track">
-                <div class="chart-fill"
-                    style="width:${prob}%;background:${color}">
-                </div>
-            </div>
-        </div>
-    `;
+function barra(titulo,valor){
+ const p=Math.max(0,Math.min(100,Number(valor)||0));
+ const color=p>=65?'#10b981':p>=45?'#f59e0b':'#ef4444';
+ return `<div class="chart-row">
+ <div class="chart-label"><span>${escapeHTML(titulo)}</span><span>${p.toFixed(1)}%</span></div>
+ <div class="chart-track"><div class="chart-fill" style="width:${p}%;background:${color}"></div></div>
+ </div>`;
 }
 
 // ==========================================
-// CARGAR PARTIDOS REALES
+// CONEXION CLOUDFLARE
 // ==========================================
 
-async function cargarPartidos() {
-
-    const listaDiv = document.getElementById('lista-partidos');
-    const boton = document.getElementById('btn-cargar');
-
-    const ligaId = document.getElementById('league-select').value;
-    const fecha = document.getElementById('date-select').value;
-
-    const ligaInfo = ligasFootballData[ligaId];
-
-    if (!ligaInfo) {
-        listaDiv.innerHTML = 'Liga no configurada.';
-        return;
-    }
-
-    if (!fecha) {
-        listaDiv.innerHTML =
-            '<div class="error-box">Selecciona una fecha.</div>';
-        return;
-    }
-
-    boton.disabled = true;
-    boton.textContent = 'Buscando partidos...';
-
-    listaDiv.innerHTML =
-        '<div class="loader">🌐 Conectando con Football-Data...</div>';
-
-    try {
-
-        const fechaInicio = fecha;
-
-        const url = `${PROXY_URL}/competitions/${ligaInfo.slug}/matches?dateFrom=${fechaInicio}&dateTo=${fechaInicio}&status=SCHEDULED`;
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        const texto = await response.text();
-
-        if (!response.ok) {
-            throw new Error(
-                `Error HTTP ${response.status}: ${texto.substring(0, 180)}`
-            );
-        }
-
-        let data;
-
-        try {
-            data = JSON.parse(texto);
-        } catch (e) {
-            throw new Error(
-                'Cloudflare no está devolviendo JSON. Revisa el código del Worker.'
-            );
-        }
-
-        if (!Array.isArray(data.matches)) {
-            throw new Error(
-                'La API no devuelve la lista de partidos esperada.'
-            );
-        }
-
-        partidosActuales = data.matches;
-
-        if (partidosActuales.length === 0) {
-            listaDiv.innerHTML = `
-                <div class="info-box info-blue">
-                    No hay partidos programados para esta fecha
-                    en ${escapeHTML(ligaInfo.nombre)}.
-                </div>
-            `;
-            return;
-        }
-
-        mostrarPartidos(ligaInfo);
-
-    } catch (error) {
-
-        listaDiv.innerHTML = `
-            <div class="error-box">
-                <h3>⚠️ Error de conexión</h3>
-                <p>${escapeHTML(error.message)}</p>
-                <p style="margin-top:8px">
-                    Comprueba tu conexión, la clave API y el Worker
-                    de Cloudflare.
-                </p>
-            </div>
-        `;
-
-    } finally {
-
-        boton.disabled = false;
-        boton.textContent = '🔄 Generar partidos';
-
-    }
+async function comprobarConexion(){
+ const caja=document.getElementById('estado-conexion');
+ caja.textContent='Comprobando Cloudflare y las API...';
+ try{
+  const r=await fetch(PROXY_URL+'/health');
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Error de conexión');
+  caja.innerHTML=`<strong>Cloudflare:</strong> conectado<br>
+  <strong>Football-Data:</strong> ${d.footballData?'configurada':'sin configurar'}<br>
+  <strong>Gemini:</strong> ${d.gemini?'configurada':'sin configurar'}`;
+ }catch(e){
+  caja.textContent='No se pudo comprobar la conexión: '+e.message;
+ }
 }
 
 // ==========================================
-// MOSTRAR PARTIDOS
+// PARTIDOS
 // ==========================================
 
-function mostrarPartidos(ligaInfo) {
+async function cargarPartidos(){
+ const lista=document.getElementById('lista-partidos');
+ const boton=document.getElementById('btn-cargar');
+ const ligaId=document.getElementById('league-select').value;
+ const fecha=document.getElementById('date-select').value;
+ const liga=ligasFootballData[ligaId];
 
-    const listaDiv = document.getElementById('lista-partidos');
+ if(!fecha){lista.innerHTML='<div class="error-box">Selecciona una fecha.</div>';return;}
 
-    listaDiv.innerHTML = partidosActuales.map((match, index) => {
+ boton.disabled=true;
+ boton.textContent='Buscando partidos...';
+ lista.innerHTML='<div class="loader">🌐 Consultando Football-Data...</div>';
 
-        const local = match.homeTeam?.name || 'Equipo local';
-        const visita = match.awayTeam?.name || 'Equipo visitante';
+ try{
+  const url=`${PROXY_URL}/competitions/${liga.slug}/matches?dateFrom=${encodeURIComponent(fecha)}&dateTo=${encodeURIComponent(fecha)}`;
+  const r=await fetch(url);
+  const texto=await r.text();
+  if(!r.ok)throw new Error(`Football-Data HTTP ${r.status}: ${texto.slice(0,180)}`);
+  const d=JSON.parse(texto);
+  if(!Array.isArray(d.matches))throw new Error('Respuesta de partidos no válida.');
 
-        const fecha = new Date(match.utcDate);
+  partidosActuales=d.matches;
+  if(!partidosActuales.length){
+   lista.innerHTML='<div class="info-box">No hay partidos para esa fecha y competición.</div>';
+   return;
+  }
+  mostrarPartidos(liga);
+ }catch(e){
+  lista.innerHTML=`<div class="error-box">${escapeHTML(e.message)}</div>`;
+ }finally{
+  boton.disabled=false;
+  boton.textContent='🔄 GENERAR PARTIDOS';
+ }
+}
 
-        const fechaTexto = fecha.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'short'
-        });
-
-        const hora = fecha.toLocaleTimeString('es-ES', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        return `
-            <div class="match-card">
-
-                <div class="match-header">
-                    <span class="league-badge">
-                        ${escapeHTML(ligaInfo.nombre)}
-                    </span>
-
-                    <span class="match-time">
-                        ${fechaTexto} · ${hora}
-                    </span>
-                </div>
-
-                <div class="teams-row">
-                    <div class="team-name">
-                        ${escapeHTML(local)}
-                    </div>
-
-                    <div class="vs-badge">VS</div>
-
-                    <div class="team-name right">
-                        ${escapeHTML(visita)}
-                    </div>
-                </div>
-
-                <button class="btn"
-                    onclick="analizarPartido(${index})">
-                    📊 ANALIZAR PARTIDO
-                </button>
-
-            </div>
-        `;
-
-    }).join('');
+function mostrarPartidos(liga){
+ const lista=document.getElementById('lista-partidos');
+ lista.innerHTML=partidosActuales.map((m,i)=>{
+  const fecha=new Date(m.utcDate);
+  return `<div class="match-card">
+   <div class="match-header">
+    <span class="league-badge">${escapeHTML(liga.nombre)}</span>
+    <span class="match-time">${fecha.toLocaleDateString('es-ES')} · ${fecha.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</span>
+   </div>
+   <div class="teams-row">
+    <div class="team-name">${escapeHTML(m.homeTeam?.name||'Local')}</div>
+    <div class="vs-badge">VS</div>
+    <div class="team-name right">${escapeHTML(m.awayTeam?.name||'Visitante')}</div>
+   </div>
+   <button class="btn" onclick="analizarPartido(${i})">🧠 ANALIZAR CON GEMINI</button>
+  </div>`;
+ }).join('');
 }
 
 // ==========================================
-// MOTOR MATEMÁTICO POISSON
+// MODELO POISSON
 // ==========================================
 
-function calcularModelo(local, visita) {
+function calcularModelo(local,visita){
+ const l=obtenerFuerza(local),v=obtenerFuerza(visita);
+ const xgL=l.atk*v.def*1.2;
+ const xgV=v.atk*l.def;
+ const max=12;
+ let total=0,localWin=0,draw=0,awayWin=0;
+ let over15=0,over25=0,under25=0,btts=0;
+ let localGol=0,visitaGol=0,unoX=0,equisDos=0;
+ let comb1X15=0,combLocal15=0,combVisita15=0;
 
-    const dataL = obtenerFuerza(local);
-    const dataV = obtenerFuerza(visita);
-
-    // Estimaciones orientativas
-    const xgL = dataL.atk * dataV.def * 1.2;
-    const xgV = dataV.atk * dataL.def;
-
-    const MAX_GOLES = 12;
-
-    const matriz = [];
-
-    let probLocal = 0;
-    let probEmpate = 0;
-    let probVisita = 0;
-
-    let over15 = 0;
-    let over25 = 0;
-    let btts = 0;
-
-    let prob1X = 0;
-    let probX2 = 0;
-
-    let probLocalGol = 0;
-    let probVisitaGol = 0;
-
-    let combLocalOver15 = 0;
-    let combVisitaOver15 = 0;
-    let comb1XOver15 = 0;
-
-    for (let i = 0; i <= MAX_GOLES; i++) {
-
-        matriz[i] = [];
-
-        for (let j = 0; j <= MAX_GOLES; j++) {
-
-            const p = poisson(i, xgL) * poisson(j, xgV);
-
-            matriz[i][j] = p;
-
-            if (i > j) probLocal += p;
-            else if (i === j) probEmpate += p;
-            else probVisita += p;
-
-            if (i + j >= 2) over15 += p;
-            if (i + j >= 3) over25 += p;
-
-            if (i >= 1 && j >= 1) btts += p;
-
-            if (i >= 1) probLocalGol += p;
-            if (j >= 1) probVisitaGol += p;
-
-            if (i >= j) prob1X += p;
-            if (j >= i) probX2 += p;
-
-            if (i > j && i + j >= 2) {
-                combLocalOver15 += p;
-            }
-
-            if (j > i && i + j >= 2) {
-                combVisitaOver15 += p;
-            }
-
-            if (i >= j && i + j >= 2) {
-                comb1XOver15 += p;
-            }
-        }
-    }
-
-    // Normalización por el pequeño margen de truncamiento
-    const total = matriz.reduce(
-        (suma, fila) => suma + fila.reduce((a, b) => a + b, 0),
-        0
-    );
-
-    function normalizar(valor) {
-        return porcentaje(valor / total);
-    }
-
-    return {
-        xgL,
-        xgV,
-
-        local: normalizar(probLocal),
-        empate: normalizar(probEmpate),
-        visita: normalizar(probVisita),
-
-        over15: normalizar(over15),
-        over25: normalizar(over25),
-        btts: normalizar(btts),
-
-        localGol: normalizar(probLocalGol),
-        visitaGol: normalizar(probVisitaGol),
-
-        unoX: normalizar(prob1X),
-        equisDos: normalizar(probX2),
-
-        combLocalOver15: normalizar(combLocalOver15),
-        combVisitaOver15: normalizar(combVisitaOver15),
-        comb1XOver15: normalizar(comb1XOver15)
-    };
+ for(let i=0;i<=max;i++){
+  for(let j=0;j<=max;j++){
+   const p=poisson(i,xgL)*poisson(j,xgV);
+   total+=p;
+   if(i>j)localWin+=p;
+   else if(i===j)draw+=p;
+   else awayWin+=p;
+   if(i+j>=2)over15+=p;
+   if(i+j>=3)over25+=p;
+   if(i+j<=2)under25+=p;
+   if(i>0&&j>0)btts+=p;
+   if(i>0)localGol+=p;
+   if(j>0)visitaGol+=p;
+   if(i>=j)unoX+=p;
+   if(j>=i)equisDos+=p;
+   if(i>=j&&i+j>=2)comb1X15+=p;
+   if(i>j&&i+j>=2)combLocal15+=p;
+   if(j>i&&i+j>=2)combVisita15+=p;
+  }
+ }
+ const n=x=>pct(x/total);
+ return {
+  xgL,xgV,
+  local:n(localWin),empate:n(draw),visita:n(awayWin),
+  over15:n(over15),over25:n(over25),under25:n(under25),
+  btts:n(btts),localGol:n(localGol),visitaGol:n(visitaGol),
+  unoX:n(unoX),equisDos:n(equisDos),
+  comb1X15:n(comb1X15),combLocal15:n(combLocal15),combVisita15:n(combVisita15)
+ };
 }
 
 // ==========================================
-// ANALIZAR PARTIDO
+// ANALISIS CON GEMINI
 // ==========================================
 
-function analizarPartido(index) {
+async function analizarPartido(index){
+ const match=partidosActuales[index];
+ if(!match)return;
 
-    const match = partidosActuales[index];
+ const local=match.homeTeam?.name||'Local';
+ const visita=match.awayTeam?.name||'Visitante';
+ const liga=match.competition?.name||'Competición';
+ const fecha=match.utcDate||'';
+ const m=calcularModelo(local,visita);
 
-    if (!match) return;
+ const lista=document.getElementById('lista-partidos');
+ lista.innerHTML='<div class="loader">🧠 Gemini está estudiando el partido...<br><br>Analizando goles, mercados y recomendaciones.</div>';
 
-    const local = match.homeTeam?.name || 'Local';
-    const visita = match.awayTeam?.name || 'Visitante';
+ try{
+  const r=await fetch(PROXY_URL+'/gemini/analyze',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+    local,visita,liga,fecha,
+    modelo:m,
+    datosCorners:null,
+    datosTarjetas:null
+   })
+  });
 
-    const fecha = new Date(match.utcDate).toLocaleString('es-ES');
-
-    const listaDiv = document.getElementById('lista-partidos');
-
-    listaDiv.innerHTML =
-        '<div class="loader">🧠 Calculando probabilidades...</div>';
-
-    try {
-
-        const m = calcularModelo(local, visita);
-
-        mostrarAnalisis(local, visita, fecha, m);
-
-    } catch (error) {
-
-        listaDiv.innerHTML = `
-            <div class="error-box">
-                Error al calcular el análisis:
-                ${escapeHTML(error.message)}
-            </div>
-        `;
-
-    }
+  const texto=await r.text();
+  if(!r.ok)throw new Error(`Gemini HTTP ${r.status}: ${texto.slice(0,250)}`);
+  const respuesta=JSON.parse(texto);
+  analisisActual={local,visita,liga,fecha,modelo:m,ia:respuesta.analysis};
+  mostrarAnalisis(analisisActual);
+ }catch(e){
+  analisisActual={local,visita,liga,fecha,modelo:m,ia:null,error:e.message};
+  mostrarAnalisis(analisisActual);
+ }
 }
 
 // ==========================================
-// ANÁLISIS Y GRÁFICOS
+// PESTAÑAS DEL INFORME
 // ==========================================
 
-function mostrarAnalisis(local, visita, fecha, m) {
+function cambiarPestana(nombre){
+ document.querySelectorAll('.analysis-panel').forEach(p=>p.classList.remove('active'));
+ document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+ const panel=document.getElementById('panel-'+nombre);
+ const boton=document.getElementById('tab-'+nombre);
+ if(panel)panel.classList.add('active');
+ if(boton)boton.classList.add('active');
+}
 
-    const listaDiv = document.getElementById('lista-partidos');
+function mostrarAnalisis(a){
+ const lista=document.getElementById('lista-partidos');
+ const m=a.modelo;
+ const ia=a.ia||{};
+ const fecha=a.fecha?new Date(a.fecha).toLocaleString('es-ES'):'Fecha no disponible';
 
-    const opciones = [
-        { nombre: `Más de 1.5 goles`, valor: m.over15 },
-        { nombre: `Más de 2.5 goles`, valor: m.over25 },
-        { nombre: `Ambos equipos marcan`, valor: m.btts },
-        { nombre: `${local} o empate (1X)`, valor: m.unoX },
-        { nombre: `${visita} o empate (X2)`, valor: m.equisDos },
-        { nombre: `Victoria ${local}`, valor: m.local },
-        { nombre: `Empate`, valor: m.empate },
-        { nombre: `Victoria ${visita}`, valor: m.visita }
-    ];
+ const aiText=(v,def='Sin datos suficientes para valorar.')=>
+  typeof v==='string'&&v.trim()?escapeHTML(v):def;
 
-    opciones.sort((a, b) => b.valor - a.valor);
+ const corners=ia.corners||{};
+ const tarjetas=ia.tarjetas||{};
+ const goles=ia.goles||{};
+ const combinadas=Array.isArray(ia.combinadas)?ia.combinadas:[];
+ const recomendacion=ia.recomendacion||{};
 
-    const mejor = opciones[0];
+ lista.innerHTML=`
+ <button class="btn btn-secondary" onclick="cargarPartidos()">← VOLVER A PARTIDOS</button>
 
-    const confianza =
-        mejor.valor >= 75 ? 'ALTA' :
-        mejor.valor >= 60 ? 'MEDIA' : 'BAJA';
+ <div class="match-card" style="margin-top:14px">
+  <div class="teams-row">
+   <div class="team-name">${escapeHTML(a.local)}</div>
+   <div class="vs-badge">VS</div>
+   <div class="team-name right">${escapeHTML(a.visita)}</div>
+  </div>
+  <p class="match-time" style="text-align:center">${escapeHTML(a.liga)} · ${escapeHTML(fecha)}</p>
 
-    const color =
-        confianza === 'ALTA' ? '#10b981' :
-        confianza === 'MEDIA' ? '#f59e0b' : '#ef4444';
+  <div class="chart-box" style="text-align:center;margin-top:15px">
+   <p class="small-note">GOLES ESPERADOS DEL MODELO</p>
+   <div class="stat-value">${m.xgL.toFixed(2)} - ${m.xgV.toFixed(2)}</div>
+   <p class="small-note">Estimación matemática orientativa, no dato oficial.</p>
+  </div>
 
-    listaDiv.innerHTML = `
+  <div class="tabs">
+   <button id="tab-general" class="tab active" onclick="cambiarPestana('general')">📊 General</button>
+   <button id="tab-corners" class="tab" onclick="cambiarPestana('corners')">🚩 Córners</button>
+   <button id="tab-tarjetas" class="tab" onclick="cambiarPestana('tarjetas')">🟨 Tarjetas</button>
+   <button id="tab-combinadas" class="tab" onclick="cambiarPestana('combinadas')">🔗 Combinadas</button>
+  </div>
 
-        <button class="btn btn-secondary"
-            onclick="cargarPartidos()">
-            ← VOLVER A PARTIDOS
-        </button>
+  <section id="panel-general" class="analysis-panel active">
+   <h3 class="section-title">⚽ RESULTADO 1X2</h3>
+   <div class="chart-box">
+    ${barra('Victoria '+a.local,m.local)}
+    ${barra('Empate',m.empate)}
+    ${barra('Victoria '+a.visita,m.visita)}
+   </div>
 
-        <div class="match-card" style="margin-top:15px">
+   <h3 class="section-title">⚽ GOLES Y BTTS</h3>
+   <div class="chart-box">
+    ${barra('Más de 1.5 goles',m.over15)}
+    ${barra('Más de 2.5 goles',m.over25)}
+    ${barra('Menos de 2.5 goles',m.under25)}
+    ${barra('Ambos equipos marcan - Sí',m.btts)}
+    ${barra(a.local+' marca',m.localGol)}
+    ${barra(a.visita+' marca',m.visitaGol)}
+   </div>
 
-            <div class="teams-row">
-                <div class="team-name">
-                    ${escapeHTML(local)}
-                </div>
+   <h3 class="section-title">🧠 VALORACIÓN DE GEMINI</h3>
+   <div class="info-box">${aiText(goles.valoracion||ia.resumen,'Gemini no ha devuelto una valoración.')}</div>
+   <p class="small-note">${a.error?'Aviso de conexión con Gemini: '+escapeHTML(a.error):'Análisis recibido de Gemini.'}</p>
+  </section>
 
-                <div class="vs-badge">VS</div>
+  <section id="panel-corners" class="analysis-panel">
+   <h3 class="section-title">🚩 ANÁLISIS DE CÓRNERS</h3>
+   <div class="chart-box">
+    <p><strong>${escapeHTML(a.local)}:</strong> ${aiText(corners.local)}</p>
+    <p style="margin-top:10px"><strong>${escapeHTML(a.visita)}:</strong> ${aiText(corners.visita)}</p>
+    <p style="margin-top:10px"><strong>Total del partido:</strong> ${aiText(corners.total)}</p>
+    <p style="margin-top:10px"><strong>Mercado sugerido:</strong> ${aiText(corners.mercado)}</p>
+   </div>
+   <div class="info-box">No se han proporcionado estadísticas reales de córners. Gemini no debe inventar promedios ni porcentajes.</div>
+  </section>
 
-                <div class="team-name right">
-                    ${escapeHTML(visita)}
-                </div>
-            </div>
+  <section id="panel-tarjetas" class="analysis-panel">
+   <h3 class="section-title">🟨 ANÁLISIS DE TARJETAS</h3>
+   <div class="chart-box">
+    <p><strong>${escapeHTML(a.local)}:</strong> ${aiText(tarjetas.local)}</p>
+    <p style="margin-top:10px"><strong>${escapeHTML(a.visita)}:</strong> ${aiText(tarjetas.visita)}</p>
+    <p style="margin-top:10px"><strong>Total del partido:</strong> ${aiText(tarjetas.total)}</p>
+    <p style="margin-top:10px"><strong>Mercado sugerido:</strong> ${aiText(tarjetas.mercado)}</p>
+   </div>
+   <div class="info-box">Sin datos históricos de tarjetas no se puede calcular una probabilidad fiable.</div>
+  </section>
 
-            <p class="match-time"
-                style="text-align:center;margin-top:12px">
-                📅 ${escapeHTML(fecha)}
-            </p>
+  <section id="panel-combinadas" class="analysis-panel">
+   <h3 class="section-title">🔗 COMBINADAS</h3>
+   ${combinadas.length?combinadas.map(c=>`
+    <div class="chart-box">
+     <strong>${aiText(c.mercado,'Mercado no indicado')}</strong>
+     <p style="margin-top:7px">${aiText(c.motivo,'Sin explicación')}</p>
+     <p style="margin-top:7px">Probabilidad: ${Number.isFinite(Number(c.probabilidad))?Number(c.probabilidad).toFixed(1)+'%':'No disponible'}</p>
+    </div>`).join(''):'<div class="info-box">No hay combinadas justificadas con los datos disponibles.</div>'}
+  </section>
 
-            <div style="
-                background:#0f172a;
-                padding:18px;
-                border-radius:12px;
-                margin-top:18px;
-                text-align:center">
+  <div class="recommendation">
+   <h3>🏆 RECOMENDACIÓN FINAL SUPERFOOTY</h3>
+   <p class="small-note" style="color:#cbd5e1">Selección valorada por el modelo y Gemini</p>
+   <p class="pick">${aiText(recomendacion.mercado,'SIN APUESTA RECOMENDADA')}</p>
+   <p style="font-size:14px;margin:8px 0">Probabilidad: ${Number.isFinite(Number(recomendacion.probabilidad))?Number(recomendacion.probabilidad).toFixed(1)+'%':'No calculada'}</p>
+   <p>${aiText(recomendacion.motivo,'No hay datos suficientes para emitir una recomendación.')}</p>
+   <p style="margin-top:10px;font-weight:bold;color:#fbbf24">${aiText(recomendacion.confianza,'CONFIANZA NO DETERMINADA')}</p>
+  </div>
 
-                <p style="color:#94a3b8;font-size:12px">
-                    GOLES ESPERADOS (xG)
-                </p>
-
-                <p style="
-                    color:#10b981;
-                    font-size:25px;
-                    font-weight:900;
-                    margin-top:8px">
-
-                    ${m.xgL.toFixed(2)}
-                    -
-                    ${m.xgV.toFixed(2)}
-
-                </p>
-
-                <p style="color:#94a3b8;font-size:10px;margin-top:8px">
-                    Estimación del modelo matemático
-                </p>
-            </div>
-
-            <h3 class="section-title">
-                📊 GRÁFICO DE RESULTADOS 1X2
-            </h3>
-
-            <div class="chart-box">
-
-                ${crearBarraProbabilidad(
-                    `Victoria ${local}`, m.local
-                )}
-
-                ${crearBarraProbabilidad(
-                    'Empate', m.empate
-                )}
-
-                ${crearBarraProbabilidad(
-                    `Victoria ${visita}`, m.visita
-                )}
-
-            </div>
-
-            <h3 class="section-title">
-                ⚽ GRÁFICO DE GOLES
-            </h3>
-
-            <div class="chart-box">
-
-                ${crearBarraProbabilidad(
-                    'Más de 1.5 goles', m.over15
-                )}
-
-                ${crearBarraProbabilidad(
-                    'Más de 2.5 goles', m.over25
-                )}
-
-                ${crearBarraProbabilidad(
-                    'Ambos equipos marcan SÍ', m.btts
-                )}
-
-                ${crearBarraProbabilidad(
-                    `${local} marca al menos un gol`, m.localGol
-                )}
-
-                ${crearBarraProbabilidad(
-                    `${visita} marca al menos un gol`, m.visitaGol
-                )}
-
-            </div>
-
-            <h3 class="section-title">
-                🔗 DOBLE OPORTUNIDAD
-            </h3>
-
-            <div class="chart-box">
-
-                ${crearBarraProbabilidad(
-                    `${local} o empate (1X)`, m.unoX
-                )}
-
-                ${crearBarraProbabilidad(
-                    `${visita} o empate (X2)`, m.equisDos
-                )}
-
-            </div>
-
-            <h3 class="section-title">
-                📈 COMBINACIONES
-            </h3>
-
-            <div class="chart-box">
-
-                ${crearBarraProbabilidad(
-                    `${local} gana + Más de 1.5 goles`,
-                    m.combLocalOver15
-                )}
-
-                ${crearBarraProbabilidad(
-                    `${visita} gana + Más de 1.5 goles`,
-                    m.combVisitaOver15
-                )}
-
-                ${crearBarraProbabilidad(
-                    `${local} o empate + Más de 1.5 goles`,
-                    m.comb1XOver15
-                )}
-
-            </div>
-
-            <div class="recommendation">
-
-                <h3>🏆 RECOMENDACIÓN DEL MODELO</h3>
-
-                <p style="font-size:12px;color:#cbd5e1">
-                    Opción con mayor probabilidad estimada
-                </p>
-
-                <p class="pick">
-                    ${escapeHTML(mejor.nombre)}
-                </p>
-
-                <p style="font-size:22px;font-weight:900;color:#10b981">
-                    ${mejor.valor.toFixed(1)}%
-                </p>
-
-                <p style="
-                    display:inline-block;
-                    color:${color};
-                    border:1px solid ${color};
-                    padding:6px 12px;
-                    border-radius:6px;
-                    margin-top:10px;
-                    font-size:12px;
-                    font-weight:bold">
-
-                    CONFIANZA ${confianza}
-
-                </p>
-
-            </div>
-
-            <div class="info-box info-blue" style="margin-top:18px">
-
-                <strong>ℹ️ Información del análisis</strong>
-
-                <p style="margin-top:7px">
-                    Los partidos y sus fechas proceden de Football-Data.
-                    Las probabilidades son estimaciones matemáticas
-                    basadas en fuerzas orientativas de los equipos.
-                    No equivalen a estadísticas reales de temporada
-                    ni garantizan resultados.
-                </p>
-
-                <p style="margin-top:7px">
-                    Córners, tarjetas, alineaciones, lesiones e
-                    historial H2H no están disponibles en este modelo.
-                </p>
-
-            </div>
-
-        </div>
-    `;
+  <div class="info-box" style="margin-top:15px">
+   <strong>Transparencia del análisis</strong><br>
+   Los porcentajes Poisson son orientativos y usan fuerzas de equipos de ejemplo, no estadísticas actuales.
+   Gemini no puede convertir datos inexistentes en estadísticas reales. No se garantiza ningún resultado.
+  </div>
+ </div>`;
+ cambiarPestana('general');
 }
 
 // ==========================================
 // FIN SUPERFOOTY PRO
 // ==========================================
-  
+                      
