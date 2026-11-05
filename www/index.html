@@ -2,40 +2,32 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1e3a8a">
-<title>SuperFooty Pro</title>
-
+<title>SuperFooty PRO</title>
 <style>
-:root {
- --primary:#1e3a8a;
- --accent:#10b981;
- --dark:#0f172a;
- --light:#f8fafc;
- --gray:#64748b;
-}
+:root{--p:#1e3a8a;--a:#10b981;--d:#0f172a;--l:#f8fafc;--g:#64748b}
 *{box-sizing:border-box;font-family:Arial,sans-serif;margin:0;padding:0}
-body{background:var(--light);color:var(--dark);padding-bottom:85px}
-header{background:var(--primary);color:white;text-align:center;padding:18px;position:sticky;top:0;z-index:10}
+body{background:var(--l);color:var(--d);padding-bottom:80px}
+header{background:var(--p);color:white;text-align:center;padding:18px;position:sticky;top:0;z-index:10}
 .logo{font-size:24px;font-weight:900}
-.logo span{color:var(--accent)}
-.page{display:none;padding:17px;max-width:850px;margin:auto}
+.logo span{color:var(--a)}
+.page{display:none;padding:16px;max-width:850px;margin:auto}
 .page.active{display:block}
-h2{font-size:21px;margin:10px 0 18px;border-left:5px solid var(--accent);padding-left:10px}
-h3.section-title{font-size:15px;color:var(--primary);margin:20px 0 10px;border-bottom:2px solid var(--primary);padding-bottom:8px}
+h2{font-size:21px;margin:10px 0 18px;border-left:5px solid var(--a);padding-left:10px}
 .match-card,.panel{background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 3px 12px #00000008}
 .match-header{display:flex;justify-content:space-between;gap:8px;margin-bottom:14px}
-.league-badge{background:#e0e7ff;color:var(--primary);padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold}
-.match-time{font-size:12px;color:var(--gray)}
+.league-badge{background:#e0e7ff;color:var(--p);padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold}
+.match-time,.small-note{font-size:12px;color:var(--g);line-height:1.5}
 .teams-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:15px 0}
 .team-name{width:43%;font-size:14px;font-weight:bold;overflow-wrap:anywhere}
 .team-name.right{text-align:right}
-.vs-badge{background:var(--dark);color:white;padding:7px 10px;border-radius:7px;font-size:12px}
-.btn{width:100%;padding:13px;background:var(--accent);color:white;border:0;border-radius:10px;font-size:14px;font-weight:bold;margin-top:8px;cursor:pointer}
+.vs-badge{background:var(--d);color:white;padding:7px 10px;border-radius:7px;font-size:12px}
+.btn{width:100%;padding:13px;background:var(--a);color:white;border:0;border-radius:10px;font-size:14px;font-weight:bold;margin-top:8px;cursor:pointer}
 .btn:disabled{opacity:.55}
 .btn-secondary{background:#64748b}
 select,input[type=date]{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:9px;background:white;font-size:15px;margin-bottom:12px}
-.loader{text-align:center;padding:25px;color:var(--primary);font-weight:bold}
+.loader{text-align:center;padding:25px;color:var(--p);font-weight:bold}
 .chart-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:13px;margin-bottom:14px}
 .chart-row{margin-bottom:14px}
 .chart-label{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:bold;margin-bottom:6px}
@@ -45,94 +37,81 @@ select,input[type=date]{width:100%;padding:13px;border:1px solid #cbd5e1;border-
 .info-box{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
 .error-box{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
 .recommendation{background:linear-gradient(135deg,#1e3a8a,#0f172a);color:white;padding:19px;border-radius:14px;text-align:center;margin-top:20px}
-.recommendation h3{color:#fbbf24;margin-bottom:12px}
-.pick{font-size:19px;font-weight:bold;margin:12px 0}
 .tabs{display:flex;gap:7px;overflow-x:auto;margin:15px 0}
 .tab{white-space:nowrap;border:1px solid #cbd5e1;background:white;color:#334155;border-radius:20px;padding:10px 13px;font-weight:bold;font-size:12px}
-.tab.active{background:var(--primary);color:white;border-color:var(--primary)}
+.tab.active{background:var(--p);color:white}
 .analysis-panel{display:none}
 .analysis-panel.active{display:block}
-.stat-value{font-size:22px;font-weight:900;color:var(--primary);margin:7px 0}
 .home-banner{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:white;padding:25px 18px;border-radius:16px;text-align:center;margin-bottom:17px}
 .home-banner h1{font-size:25px;margin-bottom:10px}
 nav{position:fixed;bottom:0;left:0;width:100%;background:white;display:flex;justify-content:space-around;padding:12px 0;border-top:1px solid #e2e8f0;z-index:20}
-nav a{text-decoration:none;color:var(--gray);font-size:12px;font-weight:bold;text-align:center}
-nav a.active{color:var(--primary)}
-.small-note{font-size:11px;color:var(--gray);line-height:1.5}
+nav a{text-decoration:none;color:var(--g);font-size:12px;font-weight:bold;text-align:center;cursor:pointer}
+nav a.active{color:var(--p)}
+.data-line{margin:8px 0;font-size:13px}
+h3.section-title{font-size:15px;color:var(--p);margin:20px 0 10px;border-bottom:2px solid var(--p);padding-bottom:8px}
 </style>
 </head>
-
 <body>
-<header>
- <div class="logo">⚽ SUPER<span>FOOTY</span> PRO</div>
-</header>
+
+<header><div class="logo">⚽ SUPER<span>FOOTY</span> PRO</div></header>
 
 <main id="inicio" class="page active">
- <div class="home-banner">
-  <h1>Bienvenido a SuperFooty</h1>
-  <p>Estadísticas, probabilidades y análisis con IA</p>
-  <button class="btn" style="background:white;color:#1e3a8a" onclick="showPage('partidos')">EMPEZAR A ANALIZAR</button>
- </div>
- <div class="panel">
-  <h3>🌐 Football-Data</h3>
-  <p class="small-note">Consulta partidos y resultados mediante Cloudflare.</p>
- </div>
- <div class="panel">
-  <h3>🧠 Gemini IA</h3>
-  <p class="small-note">Análisis de mercados, goles, córners, tarjetas y combinaciones cuando existan datos suficientes.</p>
- </div>
- <div id="estado-conexion" class="info-box">Conexión pendiente de comprobar.</div>
- <button class="btn" onclick="comprobarConexion()">COMPROBAR CONEXIONES</button>
+  <div class="home-banner">
+    <h1>Bienvenido a SuperFooty</h1>
+    <p>Estadísticas, probabilidades y análisis con datos de fútbol</p>
+    <button class="btn" style="background:white;color:#1e3a8a" onclick="showPage('partidos')">EMPEZAR A ANALIZAR</button>
+  </div>
+  <div class="panel">
+    <h3>🌐 5DollarFootballAPI</h3>
+    <p class="small-note">Partidos, resultados, córners y tarjetas según la cobertura disponible.</p>
+  </div>
+  <div class="panel">
+    <h3>🧠 Gemini IA</h3>
+    <p class="small-note">Análisis prudente. La IA no inventará estadísticas que falten.</p>
+  </div>
+  <div id="estado-conexion" class="info-box">Conexión pendiente de comprobar.</div>
+  <button class="btn" onclick="comprobarConexion()">COMPROBAR CONEXIONES</button>
+  <p class="small-note" style="margin-top:12px">Football data by <a href="https://5dollarfootballapi.com" target="_blank">5DollarFootballAPI</a>.</p>
 </main>
 
 <main id="partidos" class="page">
- <h2>Partidos y análisis</h2>
-
- <select id="league-select">
-  <option value="esp.1">La Liga - España</option>
-  <option value="eng.1">Premier League</option>
-  <option value="ita.1">Serie A</option>
-  <option value="ger.1">Bundesliga</option>
-  <option value="fra.1">Ligue 1</option>
- </select>
-
- <input type="date" id="date-select">
- <button class="btn" id="btn-cargar" onclick="cargarPartidos()">🔄 GENERAR PARTIDOS</button>
-
- <div id="lista-partidos">
-  <div class="loader">Selecciona una fecha y genera los partidos.</div>
- </div>
+  <h2>Partidos y análisis</h2>
+  <select id="league-select">
+    <option value="1810150156">La Liga - España</option>
+    <option value="3120672213">Premier League</option>
+  </select>
+  <input type="date" id="date-select">
+  <button class="btn" id="btn-cargar" onclick="cargarPartidos()">🔄 GENERAR PARTIDOS</button>
+  <div id="lista-partidos"><div class="loader">Selecciona una fecha y genera los partidos.</div></div>
 </main>
 
 <main id="equipos" class="page">
- <h2>Equipos</h2>
- <div class="panel">
-  <h3>📊 Estadísticas de equipos</h3>
-  <p class="small-note">La información de córners y tarjetas se mostrará cuando esté disponible una fuente estadística que la proporcione.</p>
- </div>
+  <h2>Equipos</h2>
+  <div class="panel">
+    <h3>📊 Estadísticas</h3>
+    <p class="small-note">Promedios de córners y tarjetas de los últimos partidos terminados, si la API los proporciona.</p>
+  </div>
 </main>
 
 <nav>
- <a id="nav-inicio" class="active" onclick="showPage('inicio')">🏠<br>Inicio</a>
- <a id="nav-partidos" onclick="showPage('partidos')">⚽<br>Partidos IA</a>
- <a id="nav-equipos" onclick="showPage('equipos')">🛡️<br>Equipos</a>
+  <a id="nav-inicio" class="active" onclick="showPage('inicio')">🏠<br>Inicio</a>
+  <a id="nav-partidos" onclick="showPage('partidos')">⚽<br>Partidos IA</a>
+  <a id="nav-equipos" onclick="showPage('equipos')">🛡️<br>Equipos</a>
 </nav>
 
 <script>
 function showPage(id){
- document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
- document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
- document.getElementById(id).classList.add('active');
- document.getElementById('nav-'+id).classList.add('active');
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
 }
-
 document.addEventListener('DOMContentLoaded',()=>{
- const input=document.getElementById('date-select');
- const hoy=new Date();
- input.value=new Date(hoy.getTime()-hoy.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  let x=document.getElementById('date-select'),d=new Date();
+  x.value=new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  if(typeof comprobarConexion==='function')comprobarConexion();
 });
 </script>
-
 <script src="app.js"></script>
 </body>
 </html>
