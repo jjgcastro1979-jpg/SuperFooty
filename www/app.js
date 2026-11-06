@@ -1,140 +1,302 @@
-'use strict';
+// SUPERFOOTY PRO - cliente. Las claves nunca se guardan aquí.
+"use strict";
+const PROXY_URL = "https://workers.dev";
+let partidosActuales = [];
+const $ = (id) => document.getElementById(id);
 
-const PROXY_URL = 'https://workers.dev';
-
-const ligasFootballData = {
- 'esp.1':{nombre:'La Liga',slug:'PD'}, 'eng.1':{nombre:'Premier League',slug:'PL'},
- 'ita.1':{nombre:'Serie A',slug:'SA'}, 'ger.1':{nombre:'Bundesliga',slug:'BL1'}, 'fra.1':{nombre:'Ligue 1',slug:'FL1'}
-};
-
-const equiposData = {
- 'Real Madrid':{atk:2.1,def:.8}, 'Barcelona':{atk:2.0,def:1.0}, 'Atletico':{atk:1.6,def:.7},
- 'Man City':{atk:2.2,def:.9}, 'Arsenal':{atk:1.9,def:.8}, 'Liverpool':{atk:1.8,def:1.0},
- 'Inter':{atk:2.0,def:.8}, 'Juventus':{atk:1.5,def:.7}, 'Bayern':{atk:2.4,def:.9}, 'PSG':{atk:2.3,def:.9}
-};
-
-const calendarioSimulado = {
- 'PD': [{ homeTeam: { name: 'Real Madrid' }, awayTeam: { name: 'Barcelona' } }, { homeTeam: { name: 'Atletico' }, awayTeam: { name: 'Sevilla' } }],
- 'PL': [{ homeTeam: { name: 'Man City' }, awayTeam: { name: 'Arsenal' } }, { homeTeam: { name: 'Liverpool' }, awayTeam: { name: 'Chelsea' } }],
- 'SA': [{ homeTeam: { name: 'Inter' }, awayTeam: { name: 'Juventus' } }], 'BL1': [{ homeTeam: { name: 'Bayern' }, awayTeam: { name: 'Dortmund' } }], 'FL1': [{ homeTeam: { name: 'PSG' }, awayTeam: { name: 'Marseille' } }]
-};
-
-let partidosActuales=[];
-const escapeHTML = v => String(v??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"' toggle":'&#39;'}[c]));
-
-function obtenerFuerza(n){
- const t = String(n).toLowerCase();
- for(const k in equiposData){ if(t.includes(String(k).toLowerCase())) return equiposData[k]; }
- return {atk:1.2,def:1.2};
+function esc(v) {
+  return String(v ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "'" }[
+        c
+      ])
+  );
 }
-function factorial(n){ let r=1; for(let i=2;i<=n;i++) r*=i; return r; }
-function poisson(k,l){ return Math.exp(-l)*Math.pow(l,k)/factorial(k); }
+
+async function api(path, opt = {}) {
+  let r = await fetch(PROXY_URL + path, opt),
+    t = await r.text(),
+    d;
+  try {
+    d = JSON.parse(t);
+  } catch {
+    throw Error("Respuesta no válida del Worker");
+  }
+  if (!r.ok) throw Error(d?.error?.message || d?.error || `HTTP ${r.status}`);
+  if (d?.success === 0) throw Error(d.error?.message || "Error API");
+  return d;
+}
 
 async function comprobarConexion() {
- const box = document.getElementById('estado-conexion'); if(!box) return;
- box.className = "info-box"; box.textContent = "Comprobando...";
- try {
-  const res = await fetch(`${PROXY_URL}/v4/competitions`, { method: 'GET' });
-  if (res.ok) {
-   box.className = "info-box"; box.style.background = "#dcfce7"; box.style.borderColor = "#bbf7d0"; box.style.color = "#166534";
-   box.textContent = "🟢 Conexión exitosa con Cloudflare Worker.";
-  } else { throw new Error(); }
- } catch (e) {
-  box.className = "error-box"; box.style.background = "#fee2e2"; box.style.borderColor = "#fca5a5"; box.style.color = "#991b1b";
-  box.textContent = "🔴 Error de red: El proxy no responde.";
- }
+  let b = $("estado-conexion");
+  if (!b) return;
+  b.textContent = "Comprobando conexiones...";
+  try {
+    let d = await api("/health");
+    b.innerHTML = `Cloudflare: conectado<br>5DollarFootballAPI: ${ d.fiveDollar ? "configurada" : "falta clave" }<br>Football-Data: ${ d.footballData ? "configurada" : "falta clave" }<br>Gemini: ${d.gemini ? "configurada" : "falta clave"}`;
+  } catch (e) {
+    b.textContent = "Error de conexión: " + e.message;
+  }
+}
+
+function unixDay(s) {
+  let [y, m, d] = s.split("-").map(Number);
+  return Math.floor(new Date(y, m - 1, d).getTime() / 1000);
 }
 
 async function cargarPartidos() {
- const lista = document.getElementById('lista-partidos');
- const ligaSelect = document.getElementById('league-select');
- const btn = document.getElementById('btn-cargar');
- if (!lista || !ligaSelect) return;
- 
- if (btn) btn.disabled = true;
- lista.innerHTML = '<div class="loader">🔄 Cargando partidos oficiales...</div>';
- const liga = ligasFootballData[ligaSelect.value];
-
- try {
-  const response = await fetch(`${PROXY_URL}/v4/competitions/${liga.slug}/matches`, { method: 'GET', mode: 'cors' });
-  const data = await response.json();
-  partidosActuales = data.matches || [];
-  if (partidosActuales.length === 0) { partidosActuales = calendarioSimulado[liga.slug]; }
- } catch (e) { 
-  partidosActuales = calendarioSimulado[liga.slug]; 
- } finally {
-  renderizarPartidos(liga.nombre);
-  if (btn) btn.disabled = false;
- }
-}
-
-function renderizarPartidos(nombreLiga) {
- const lista = document.getElementById('lista-partidos'); if(!lista) return; lista.innerHTML = '';
- partidosActuales.forEach((partido, index) => {
-  const card = document.createElement('div'); card.className = 'match-card';
-  card.innerHTML = `
-   <div class="match-header"><span class="league-badge">${escapeHTML(nombreLiga)}</span><span class="match-time">🕒 20:00</span></div>
-   <div class="teams-row"><div class="team-name">${escapeHTML(partido.homeTeam.name)}</div><div class="vs-badge">VS</div><div class="team-name right">${escapeHTML(partido.awayTeam.name)}</div></div>
-   <button class="btn" onclick="analizarPartidoConIA(${index}, this)">🧠 ANALIZAR CON IA</button>
-   <div id="analisis-container-${index}" style="margin-top: 15px;"></div>
-  `;
-  lista.appendChild(card);
- });
-}
-
-async function analizarPartidoConIA(index, btn) {
- const partido = partidosActuales[index]; const container = document.getElementById(`analisis-container-${index}`);
- if (!partido || !container) return;
- const fLocal = obtenerFuerza(partido.homeTeam.name), fVisitante = obtenerFuerza(partido.awayTeam.name);
- const expLocal = fLocal.atk * fVisitante.def, expVisitante = fVisitante.atk * fLocal.def;
- let pLocal = 0, pEmpate = 0, pVisitante = 0, pOver25 = 0, pAmbosMarcan = 0;
- for (let l = 0; l <= 5; l++) {
-  for (let v = 0; v <= 5; v++) {
-   const prob = poisson(l, expLocal) * poisson(v, expVisitante);
-   if (l > v) pLocal += prob; else if (l === v) pEmpate += prob; else pVisitante += prob;
-   if ((l + v) > 2.5) pOver25 += prob; if (l > 0 && v > 0) pAmbosMarcan += prob;
+  let list = $("lista-partidos"),
+    btn = $("btn-cargar"),
+    league = $("league-select").value,
+    date = $("date-select").value;
+  if (!date) {
+    list.innerHTML = '<div class="error-box">Selecciona una fecha.</div>';
+    return;
   }
- }
- const pctLocal = Math.round(pLocal * 100), pctEmpate = Math.round(pEmpate * 100), pctVisitante = Math.round(pVisitante * 100);
- const pctOver25 = Math.round(pOver25 * 100), pctAmbosMarcan = Math.round(pAmbosMarcan * 100);
-
- container.innerHTML = `
-  <div class="tabs">
-   <button class="tab active" onclick="cambiarTabAnalis(${index}, 'mercados', this)">📈 Mercados</button>
-   <button class="tab" onclick="cambiarTabAnalis(${index}, 'goles', this)">⚽ Goles</button>
-   <button class="tab" onclick="cambiarTabAnalis(${index}, 'ia', this)">🧠 IA Gemini</button>
-  </div>
-  <div id="panel-${index}-mercados" class="analysis-panel active"><div class="chart-box"><div class="chart-row"><div class="chart-label"><span>Local</span><span>${pctLocal}%</span></div></div><div class="chart-row"><div class="chart-label"><span>Empate</span><span>${pctEmpate}%</span></div></div><div class="chart-row"><div class="chart-label"><span>Visitante</span><span>${pctVisitante}%</span></div></div></div></div>
-  <div id="panel-${index}-goles" class="analysis-panel"><div class="chart-box"><div class="chart-row"><div class="chart-label"><span>+2.5 Goles</span><span>${pctOver25}%</span></div></div><div class="chart-row"><div class="chart-label"><span>Ambos Anotan</span><span>${pctAmbosMarcan}%</span></div></div></div></div>
-  <div id="panel-${index}-ia" class="analysis-panel"><div class="recommendation"><h3>🧠 ANÁLISIS EXPERTO GEMINI AI</h3><div id="gemini-texto-${index}" class="small-note" style="color:#f8fafc; text-align:left; font-size:12px; line-height:1.4; margin-top:10px;">⏳ Procesando con Gemini...</div></div></div>
- `;
- if(btn) btn.style.display = "none";
-
- try {
-  const prompt = `Analiza brevemente en 2 lineas el partido ${partido.homeTeam.name} vs ${partido.awayTeam.name}. Poisson: Local ${pctLocal}%, Empate ${pctEmpate}%, Visitante ${pctVisitante}%.`;
-  const res = await fetch(`${PROXY_URL}/v1/gemini`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-  const data = await res.json();
-  const boxText = document.getElementById(`gemini-texto-${index}`);
-  if (boxText && data.analisis) boxText.textContent = data.analisis;
- } catch (err) {
-  const boxText = document.getElementById(`gemini-texto-${index}`);
-  if (boxText) boxText.textContent = "Modo offline probabilístico activo.";
- }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Consultando API...";
+  }
+  list.innerHTML = '<div class="loader">🌐 Buscando partidos...</div>';
+  try {
+    let start = unixDay(date),
+      d = await api(
+        `/five-dollar/fixtures?league=${league}&start_time=${start}&end_time=${ start + 86400 }&status=scheduled&per_page=100&lang=es`
+      );
+    partidosActuales = Array.isArray(d.data) ? d.data : [];
+    if (!partidosActuales.length) {
+      list.innerHTML =
+        '<div class="info-box">No hay partidos programados en esa fecha. Prueba otra fecha.</div>';
+      return;
+    }
+    mostrarPartidos();
+  } catch (e) {
+    list.innerHTML = `<div class="error-box">${esc( e.message )}<br>Comprueba la cobertura de la competición y tu plan API.</div>`;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "🔄 GENERAR PARTIDOS";
+    }
+  }
 }
 
-function cambiarTabAnalis(index, tabId, botonActivo) {
- const cTabs = botonActivo.parentElement; cTabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); botonActivo.classList.add('active');
- cTabs.parentElement.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
- const pDestino = document.getElementById(`panel-${index}-${tabId}`); if (pDestino) pDestino.classList.add('active');
+function mostrarPartidos() {
+  $("lista-partidos").innerHTML = partidosActuales
+    .map((f, i) => {
+      let dt = f.kickoff_utc
+        ? new Date(f.kickoff_utc).toLocaleString("es-ES", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        : "Hora no disponible";
+      return `<div class="match-card"><div class="match-header"><span class="league-badge">${esc( f.league?.name || "Competición" )}</span><span class="match-time">${esc( dt )}</span></div><div class="teams-row"><div class="team-name">${esc( f.teams?.home?.name || "Local" )}</div><div class="vs-badge">VS</div><div class="team-name right">${esc( f.teams?.away?.name || "Visitante" )}</div></div><button class="btn" onclick="analizarPartido(${i})">📊 ANALIZAR PARTIDO</button></div>`;
+    })
+    .join("");
 }
 
-function inicializarApp() {
- window.comprobarConexion = comprobarConexion; window.cargarPartidos = cargarPartidos;
- window.analizarPartidoConIA = analizarPartidoConIA; window.cambiarTabAnalis = cambiarTabAnalis;
- const bConexion = document.getElementById('btn-comprobar-conexion'), bCargar = document.getElementById('btn-cargar');
- if (bConexion) bConexion.onclick = comprobarConexion; if (bCargar) bCargar.onclick = cargarPartidos;
+function mean(a) {
+  let x = a.filter(Number.isFinite);
+  return x.length ? x.reduce((s, v) => s + v, 0) / x.length : null;
 }
 
-document.addEventListener('deviceready', inicializarApp, false);
-document.addEventListener('DOMContentLoaded', inicializarApp, false);
-                          
+async function teamHistory(id) {
+  try {
+    let d = await api(
+        `/five-dollar/teams/${id}/fixtures?status=finished&per_page=10&lang=es`
+      ),
+      rows = d.data || [],
+      cf = [],
+      ca = [],
+      yc = [],
+      rc = [];
+    rows.forEach((f) => {
+      let home = String(f.teams?.home?.id) === String(id),
+        c = f.corners || {},
+        cards = f.cards || {},
+        mine = home ? cards.home : cards.away;
+      let a = home ? c.home : c.away,
+        b = home ? c.away : c.home;
+      if (Number.isFinite(a)) cf.push(a);
+      if (Number.isFinite(b)) ca.push(b);
+      if (Number.isFinite(mine?.yellow)) yc.push(mine.yellow);
+      if (Number.isFinite(mine?.red)) rc.push(mine.red);
+    });
+    return {
+      n: rows.length,
+      cf: mean(cf),
+      ca: mean(ca),
+      yellow: mean(yc),
+      red: mean(rc),
+    };
+  } catch (e) {
+    return {
+      n: 0,
+      error: e.message,
+      cf: null,
+      ca: null,
+      yellow: null,
+      red: null,
+    };
+  }
+}
+
+function fmt(x, s = "") {
+  return x === null || x === undefined ? "Sin datos" : Number(x).toFixed(2) + s;
+}
+
+function poisson(k, l) {
+  let f = 1;
+  for (let i = 2; i <= k; i++) f *= i;
+  return (Math.exp(-l) * Math.pow(l, k)) / f;
+}
+
+function model() {
+  let L = 1.35,
+    A = 1.15,
+    total = 0,
+    w = 0,
+    dr = 0,
+    l = 0,
+    o15 = 0,
+    o25 = 0,
+    b = 0;
+  for (let i = 0; i <= 12; i++)
+    for (let j = 0; j <= 12; j++) {
+      let p = poisson(i, L) * poisson(j, A);
+      total += p;
+      if (i > j) w += p;
+      else if (i === j) dr += p;
+      else l += p;
+      if (i + j >= 2) o15 += p;
+      if (i + j >= 3) o25 += p;
+      if (i && j) b += p;
+    }
+  return {
+    home: (w / total) * 100,
+    draw: (dr / total) * 100,
+    away: (l / total) * 100,
+    o15: (o15 / total) * 100,
+    o25: (o25 / total) * 100,
+    btts: (b / total) * 100,
+  };
+}
+
+function bar(label, v) {
+  let p = Math.max(0, Math.min(100, v)),
+    c = p >= 65 ? "#10b981" : p >= 45 ? "#f59e0b" : "#ef4444";
+  return `<div class="chart-row"><div class="chart-label"><span>${esc( label )}</span><span>${p.toFixed( 1 )}%</span></div><div class="chart-track"><div class="chart-fill" style="width:${p}%;background:${c}"></div></div></div>`;
+}
+
+async function analizarPartido(i) {
+  let f = partidosActuales[i];
+  if (!f) return;
+  let list = $("lista-partidos"),
+    home = f.teams?.home || {},
+    away = f.teams?.away || {};
+  list.innerHTML =
+    '<div class="loader">Consultando últimos partidos para córners y tarjetas...</div>';
+  try {
+    let [h, a] = await Promise.all([
+        teamHistory(home.id),
+        teamHistory(away.id),
+      ]),
+      ct = h.cf !== null && a.cf !== null ? h.cf + a.cf : null,
+      yt = h.yellow !== null && a.yellow !== null ? h.yellow + a.yellow : null,
+      m = model(),
+      payload = {
+        local: home.name,
+        visita: away.name,
+        liga: f.league?.name,
+        fecha: f.kickoff_utc,
+        modelo: m,
+        historico: { local: h, visita: a },
+      },
+      ia = null,
+      err = null;
+    try {
+      let g = await api("/gemini/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      ia = g.analysis || null;
+    } catch (e) {
+      err = e.message;
+    }
+    mostrarAnalisis({ f, h, a, m, ct, yt, ia, err });
+  } catch (e) {
+    list.innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+  }
+}
+
+function tab(n) {
+  document
+    .querySelectorAll(".analysis-panel")
+    .forEach((x) => x.classList.remove("active"));
+  document
+    .querySelectorAll(".tab")
+    .forEach((x) => x.classList.remove("active"));
+  $("panel-" + n)?.classList.add("active");
+  $("tab-" + n)?.classList.add("active");
+}
+
+function mostrarAnalisis(x) {
+  let { f, h, a, m, ct, yt, ia, err } = x,
+    hn = f.teams?.home?.name || "Local",
+    an = f.teams?.away?.name || "Visitante",
+    date = f.kickoff_utc
+      ? new Date(f.kickoff_utc).toLocaleString("es-ES")
+      : "Fecha no disponible";
+      
+  $("lista-partidos").innerHTML = `
+    <button class="btn btn-secondary" onclick="mostrarPartidos()">← VOLVER A PARTIDOS</button>
+    <div class="match-card">
+      <div class="teams-row">
+        <div class="team-name">${esc(hn)}</div>
+        <div class="vs-badge">VS</div>
+        <div class="team-name right">${esc(an)}</div>
+      </div>
+      <p class="match-time" style="text-align:center; font-size:12px; margin-bottom:15px;">${esc(f.league?.name || "")} · ${esc(date)}</p>
+      
+      <div class="tabs">
+        <button id="tab-general" class="tab active" onclick="tab('general')">📊 General</button>
+        <button id="tab-corners" class="tab" onclick="tab('corners')">🚩 Córners</button>
+        <button id="tab-tarjetas" class="tab" onclick="tab('tarjetas')">🟨 Tarjetas</button>
+        <button id="tab-ia" class="tab" onclick="tab('ia')">🧠 Gemini</button>
+      </div>
+
+      <div id="panel-general" class="analysis-panel active">
+        <div class="chart-box">
+          <h3 class="section-title">Probabilidad de Resultado</h3>
+          ${bar("Gana Local", m.home)}
+          ${bar("Empate", m.draw)}
+          ${bar("Gana Visitante", m.away)}
+          <h3 class="section-title">Mercados de Goles</h3>
+          ${bar("Más de 1.5 Goles", m.o15)}
+          ${bar("Más de 2.5 Goles", m.o25)}
+          ${bar("Ambos Equipos Anotan (BTTS)", m.btts)}
+        </div>
+      </div>
+
+      <div id="panel-corners" class="analysis-panel">
+        <div class="panel">
+          <h3>🚩 Estadísticas de Córners (Últimos 10 partidos)</h3>
+          <p class="small-note"><b>${esc(hn)} (A favor):</b> ${fmt(h.cf)} | <b>En contra:</b> ${fmt(h.ca)}</p>
+          <p class="small-note"><b>${esc(an)} (A favor):</b> ${fmt(a.cf)} | <b>En contra:</b> ${fmt(a.ca)}</p>
+          <div class="stat-value" style="text-align:center; margin-top:15px;">
+            Total Estimado: ${fmt(ct)}
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-tarjetas" class="analysis-panel">
+        <div class="panel">
+          <h3>🟨 Estadísticas de Tarjetas (Promedio por partido)</h3>
+          <p class="small-note"><b>${esc(hn)}:</b> 🟨 ${fmt(h.yellow)} | 🟥 ${fmt(h.red)}</p>
+          <p class="small-note"><b>${esc(an)}:</b> 🟨 ${fmt(a.yellow)} | 🟥 ${fmt(a.red)}</p>
+          <div class="stat-value" style="text-align:center; margin-top:15px; color:#f59e0b;">
+            Total Tarjetas Estimadas: ${fmt(yt)}
+          </div>
+        </div>
+                             
