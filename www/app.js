@@ -18,7 +18,6 @@ async function cargarPartidos() {
  const fecha = fechaInput.value;
  const liga = ligasFootballData[ligaId];
  
- // Ruta v4 unificada para tu proxy
  const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches?dateFrom=${fecha}&dateTo=${fecha}`;
 
  try {
@@ -28,22 +27,7 @@ async function cargarPartidos() {
    headers: { 'Accept': 'application/json' }
   });
 
-  // Si el servidor responde con un error de rango (por ejemplo, porque no hay partidos hoy)
-  if (response.status === 400 || response.status === 404) {
-   lista.innerHTML = `<div class="info-box">No hay partidos programados para la liga <b>${escapeHTML(liga.nombre)}</b> en la fecha seleccionada (${fecha}). Prueba con el fin de semana.</div>`;
-   return;
-  }
-
-  const contentType = response.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
-   throw new Error("Respuesta inesperada del servidor. Intenta cambiar de fecha.");
-  }
-
   const data = await response.json();
-
-  if (!response.ok) {
-   throw new Error(data.message || `Error del servidor (${response.status})`);
-  }
 
   partidosActuales = data.matches || [];
 
@@ -54,9 +38,8 @@ async function cargarPartidos() {
 
   renderizarPartidos(liga.nombre);
  } catch (error) {
-  lista.innerHTML = `<div class="error-box">⚠️ Aviso de la app: <br><b>${escapeHTML(error.message)}</b></div>`;
+  lista.innerHTML = `<div class="error-box">⚠️ Aviso del sistema: <br>No hay encuentros disponibles o el servidor tardó en responder. Intenta con otra fecha.</div>`;
  } finally {
   if (btn) btn.disabled = false;
  }
 }
- 
