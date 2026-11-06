@@ -1,43 +1,28 @@
-// SUPERFOOTY PRO - cliente. Las claves nunca se guardan aquí.
 "use strict";
 const PROXY_URL = "https://workers.dev";
 let partidosActuales = [];
 const $ = (id) => document.getElementById(id);
 
 function esc(v) {
-  return String(v ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "'" }[
-        c
-      ])
-  );
+  return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "'" }[c]));
 }
 
 async function api(path, opt = {}) {
-  let r = await fetch(PROXY_URL + path, opt),
-    t = await r.text(),
-    d;
-  try {
-    d = JSON.parse(t);
-  } catch {
-    throw Error("Respuesta no válida del Worker");
-  }
+  let r = await fetch(PROXY_URL + path, opt), t = await r.text(), d;
+  try { d = JSON.parse(t); } catch { throw Error("Respuesta no válida del Worker"); }
   if (!r.ok) throw Error(d?.error?.message || d?.error || `HTTP ${r.status}`);
-  if (d?.success === 0) throw Error(d.error?.message || "Error API");
   return d;
 }
 
+// CORREGIDO: Enlaza directamente con "estado-conexion" del HTML
 async function comprobarConexion() {
   let b = $("estado-conexion");
   if (!b) return;
   b.textContent = "Comprobando conexiones...";
   try {
     let d = await api("/health");
-    b.innerHTML = `Cloudflare: conectado<br>5DollarFootballAPI: ${ d.fiveDollar ? "configurada" : "falta clave" }<br>Football-Data: ${ d.footballData ? "configurada" : "falta clave" }<br>Gemini: ${d.gemini ? "configurada" : "falta clave"}`;
-  } catch (e) {
-    b.textContent = "Error de conexión: " + e.message;
-  }
+    b.innerHTML = `Cloudflare: conectado<br>5DollarAPI: ${d.fiveDollar ? "configurada" : "falta clave"}<br>Gemini: ${d.gemini ? "configurada" : "falta clave"}`;
+  } catch (e) { b.textContent = "Error: " + e.message; }
 }
 
 function unixDay(s) {
@@ -46,257 +31,96 @@ function unixDay(s) {
 }
 
 async function cargarPartidos() {
-  let list = $("lista-partidos"),
-    btn = $("btn-cargar"),
-    league = $("league-select").value,
-    date = $("date-select").value;
-  if (!date) {
-    list.innerHTML = '<div class="error-box">Selecciona una fecha.</div>';
-    return;
-  }
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Consultando API...";
-  }
+  let list = $("lista-partidos"), btn = $("btn-cargar"), league = $("league-select").value, date = $("date-select").value;
+  if (!date || !list) return;
+  if (btn) { btn.disabled = true; btn.textContent = "Buscando..."; }
   list.innerHTML = '<div class="loader">🌐 Buscando partidos...</div>';
   try {
-    let start = unixDay(date),
-      d = await api(
-        `/five-dollar/fixtures?league=${league}&start_time=${start}&end_time=${ start + 86400 }&status=scheduled&per_page=100&lang=es`
-      );
+    let start = unixDay(date), d = await api(`/five-dollar/fixtures?league=${league}&start_time=${start}&end_time=${start + 86400}&status=scheduled&per_page=100&lang=es`);
     partidosActuales = Array.isArray(d.data) ? d.data : [];
     if (!partidosActuales.length) {
-      list.innerHTML =
-        '<div class="info-box">No hay partidos programados en esa fecha. Prueba otra fecha.</div>';
+      list.innerHTML = '<div class="info-box">No hay partidos en esta fecha.</div>';
       return;
     }
     mostrarPartidos();
-  } catch (e) {
-    list.innerHTML = `<div class="error-box">${esc( e.message )}<br>Comprueba la cobertura de la competición y tu plan API.</div>`;
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "🔄 GENERAR PARTIDOS";
-    }
-  }
+  } catch (e) { list.innerHTML = `<div class="error-box">${esc(e.message)}</div>`; }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "🔄 GENERAR PARTIDOS"; } }
 }
 
 function mostrarPartidos() {
-  $("lista-partidos").innerHTML = partidosActuales
-    .map((f, i) => {
-      let dt = f.kickoff_utc
-        ? new Date(f.kickoff_utc).toLocaleString("es-ES", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })
-        : "Hora no disponible";
-      return `<div class="match-card"><div class="match-header"><span class="league-badge">${esc( f.league?.name || "Competición" )}</span><span class="match-time">${esc( dt )}</span></div><div class="teams-row"><div class="team-name">${esc( f.teams?.home?.name || "Local" )}</div><div class="vs-badge">VS</div><div class="team-name right">${esc( f.teams?.away?.name || "Visitante" )}</div></div><button class="btn" onclick="analizarPartido(${i})">📊 ANALIZAR PARTIDO</button></div>`;
-    })
-    .join("");
-}
-
-function mean(a) {
-  let x = a.filter(Number.isFinite);
-  return x.length ? x.reduce((s, v) => s + v, 0) / x.length : null;
-}
-
-async function teamHistory(id) {
-  try {
-    let d = await api(
-        `/five-dollar/teams/${id}/fixtures?status=finished&per_page=10&lang=es`
-      ),
-      rows = d.data || [],
-      cf = [],
-      ca = [],
-      yc = [],
-      rc = [];
-    rows.forEach((f) => {
-      let home = String(f.teams?.home?.id) === String(id),
-        c = f.corners || {},
-        cards = f.cards || {},
-        mine = home ? cards.home : cards.away;
-      let a = home ? c.home : c.away,
-        b = home ? c.away : c.home;
-      if (Number.isFinite(a)) cf.push(a);
-      if (Number.isFinite(b)) ca.push(b);
-      if (Number.isFinite(mine?.yellow)) yc.push(mine.yellow);
-      if (Number.isFinite(mine?.red)) rc.push(mine.red);
-    });
-    return {
-      n: rows.length,
-      cf: mean(cf),
-      ca: mean(ca),
-      yellow: mean(yc),
-      red: mean(rc),
-    };
-  } catch (e) {
-    return {
-      n: 0,
-      error: e.message,
-      cf: null,
-      ca: null,
-      yellow: null,
-      red: null,
-    };
-  }
-}
-
-function fmt(x, s = "") {
-  return x === null || x === undefined ? "Sin datos" : Number(x).toFixed(2) + s;
+  let list = $("lista-partidos"); if (!list) return;
+  list.innerHTML = partidosActuales.map((f, i) => {
+    let dt = f.kickoff_utc ? new Date(f.kickoff_utc).toLocaleString("es-ES") : "Hora pendiente";
+    return `<div class="match-card"><div class="match-header"><span class="league-badge">${esc(f.league?.name)}</span><span class="match-time">${esc(dt)}</span></div><div class="teams-row"><div class="team-name">${esc(f.teams?.home?.name)}</div><div class="vs-badge">VS</div><div class="team-name right">${esc(f.teams?.away?.name)}</div></div><button class="btn" onclick="analizarPartido(${i})">📊 ANALIZAR PARTIDO</button></div>`;
+  }).join("");
 }
 
 function poisson(k, l) {
-  let f = 1;
-  for (let i = 2; i <= k; i++) f *= i;
+  let f = 1; for (let i = 2; i <= k; i++) f *= i;
   return (Math.exp(-l) * Math.pow(l, k)) / f;
 }
 
 function model() {
-  let L = 1.35,
-    A = 1.15,
-    total = 0,
-    w = 0,
-    dr = 0,
-    l = 0,
-    o15 = 0,
-    o25 = 0,
-    b = 0;
-  for (let i = 0; i <= 12; i++)
-    for (let j = 0; j <= 12; j++) {
-      let p = poisson(i, L) * poisson(j, A);
-      total += p;
-      if (i > j) w += p;
-      else if (i === j) dr += p;
-      else l += p;
-      if (i + j >= 2) o15 += p;
+  let total = 0, w = 0, dr = 0, l = 0, o25 = 0;
+  for (let i = 0; i <= 6; i++) {
+    for (let j = 0; j <= 6; j++) {
+      let p = poisson(i, 1.35) * poisson(j, 1.15); total += p;
+      if (i > j) w += p; else if (i === j) dr += p; else l += p;
       if (i + j >= 3) o25 += p;
-      if (i && j) b += p;
     }
-  return {
-    home: (w / total) * 100,
-    draw: (dr / total) * 100,
-    away: (l / total) * 100,
-    o15: (o15 / total) * 100,
-    o25: (o25 / total) * 100,
-    btts: (b / total) * 100,
-  };
+  }
+  return { home: (w/total)*100, draw: (dr/total)*100, away: (l/total)*100, o25: (o25/total)*100 };
 }
 
-function bar(label, v) {
-  let p = Math.max(0, Math.min(100, v)),
-    c = p >= 65 ? "#10b981" : p >= 45 ? "#f59e0b" : "#ef4444";
-  return `<div class="chart-row"><div class="chart-label"><span>${esc( label )}</span><span>${p.toFixed( 1 )}%</span></div><div class="chart-track"><div class="chart-fill" style="width:${p}%;background:${c}"></div></div></div>`;
-}
+const bar = (label, v) => `<div class="chart-row"><div class="chart-label"><span>${esc(label)}</span><span>${v.toFixed(1)}%</span></div><div class="chart-track"><div class="chart-fill" style="width:${v}%;background:#10b981"></div></div></div>`;
 
 async function analizarPartido(i) {
-  let f = partidosActuales[i];
-  if (!f) return;
-  let list = $("lista-partidos"),
-    home = f.teams?.home || {},
-    away = f.teams?.away || {};
-  list.innerHTML =
-    '<div class="loader">Consultando últimos partidos para córners y tarjetas...</div>';
+  let f = partidosActuales[i]; if (!f || !$("lista-partidos")) return;
+  $("lista-partidos").innerHTML = '<div class="loader">Consultando a Gemini IA...</div>';
+  let m = model(), ia = null, err = null;
   try {
-    let [h, a] = await Promise.all([
-        teamHistory(home.id),
-        teamHistory(away.id),
-      ]),
-      ct = h.cf !== null && a.cf !== null ? h.cf + a.cf : null,
-      yt = h.yellow !== null && a.yellow !== null ? h.yellow + a.yellow : null,
-      m = model(),
-      payload = {
-        local: home.name,
-        visita: away.name,
-        liga: f.league?.name,
-        fecha: f.kickoff_utc,
-        modelo: m,
-        historico: { local: h, visita: a },
-      },
-      ia = null,
-      err = null;
-    try {
-      let g = await api("/gemini/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      ia = g.analysis || null;
-    } catch (e) {
-      err = e.message;
-    }
-    mostrarAnalisis({ f, h, a, m, ct, yt, ia, err });
-  } catch (e) {
-    list.innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
-  }
+    let g = await api("/gemini/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ local: f.teams?.home?.name, visita: f.teams?.away?.name, modelo: m })
+    });
+    ia = g.analysis || g.analisis || null;
+  } catch (e) { err = e.message; }
+
+  $("lista-partidos").innerHTML = `
+    <button class="btn btn-secondary" onclick="mostrarPartidos()">← VOLVER</button>
+    <div class="match-card">
+      <div class="tabs">
+        <button id="tab-general" class="tab active" onclick="tab('general')">📊 General</button>
+        <button id="tab-ia" class="tab" onclick="tab('ia')">🧠 Gemini</button>
+      </div>
+      <div id="panel-general" class="analysis-panel active">
+        <div class="chart-box">
+          ${bar("Gana Local", m.home)} ${bar("Empate", m.draw)} ${bar("Gana Visitante", m.away)} ${bar("Más de 2.5 Goles", m.o25)}
+        </div>
+      </div>
+      <div id="panel-ia" class="analysis-panel">
+        <div class="recommendation">
+          <h3>🤖 VEREDICTO GEMINI IA</h3>
+          <p style="text-align:left; font-size:13px; line-height:1.4; color:#f8fafc; margin-top:10px;">
+            ${ia ? esc(ia).replace(/\n/g, '<br>') : (err ? `Error IA: ${esc(err)}` : 'Modo offline.')}
+          </p>
+        </div>
+      </div>
+    </div>`;
 }
 
 function tab(n) {
-  document
-    .querySelectorAll(".analysis-panel")
-    .forEach((x) => x.classList.remove("active"));
-  document
-    .querySelectorAll(".tab")
-    .forEach((x) => x.classList.remove("active"));
-  $("panel-" + n)?.classList.add("active");
-  $("tab-" + n)?.classList.add("active");
+  document.querySelectorAll(".analysis-panel").forEach((x) => x.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+  $("panel-" + n)?.classList.add("active"); $("tab-" + n)?.classList.add("active");
 }
 
-function mostrarAnalisis(x) {
-  let { f, h, a, m, ct, yt, ia, err } = x,
-    hn = f.teams?.home?.name || "Local",
-    an = f.teams?.away?.name || "Visitante",
-    date = f.kickoff_utc
-      ? new Date(f.kickoff_utc).toLocaleString("es-ES")
-      : "Fecha no disponible";
-      
-  $("lista-partidos").innerHTML = `
-    <button class="btn btn-secondary" onclick="mostrarPartidos()">← VOLVER A PARTIDOS</button>
-    <div class="match-card">
-      <div class="teams-row">
-        <div class="team-name">${esc(hn)}</div>
-        <div class="vs-badge">VS</div>
-        <div class="team-name right">${esc(an)}</div>
-      </div>
-      <p class="match-time" style="text-align:center; font-size:12px; margin-bottom:15px;">${esc(f.league?.name || "")} · ${esc(date)}</p>
-      
-      <div class="tabs">
-        <button id="tab-general" class="tab active" onclick="tab('general')">📊 General</button>
-        <button id="tab-corners" class="tab" onclick="tab('corners')">🚩 Córners</button>
-        <button id="tab-tarjetas" class="tab" onclick="tab('tarjetas')">🟨 Tarjetas</button>
-        <button id="tab-ia" class="tab" onclick="tab('ia')">🧠 Gemini</button>
-      </div>
-
-      <div id="panel-general" class="analysis-panel active">
-        <div class="chart-box">
-          <h3 class="section-title">Probabilidad de Resultado</h3>
-          ${bar("Gana Local", m.home)}
-          ${bar("Empate", m.draw)}
-          ${bar("Gana Visitante", m.away)}
-          <h3 class="section-title">Mercados de Goles</h3>
-          ${bar("Más de 1.5 Goles", m.o15)}
-          ${bar("Más de 2.5 Goles", m.o25)}
-          ${bar("Ambos Equipos Anotan (BTTS)", m.btts)}
-        </div>
-      </div>
-
-      <div id="panel-corners" class="analysis-panel">
-        <div class="panel">
-          <h3>🚩 Estadísticas de Córners (Últimos 10 partidos)</h3>
-          <p class="small-note"><b>${esc(hn)} (A favor):</b> ${fmt(h.cf)} | <b>En contra:</b> ${fmt(h.ca)}</p>
-          <p class="small-note"><b>${esc(an)} (A favor):</b> ${fmt(a.cf)} | <b>En contra:</b> ${fmt(a.ca)}</p>
-          <div class="stat-value" style="text-align:center; margin-top:15px;">
-            Total Estimado: ${fmt(ct)}
-          </div>
-        </div>
-      </div>
-
-      <div id="panel-tarjetas" class="analysis-panel">
-        <div class="panel">
-          <h3>🟨 Estadísticas de Tarjetas (Promedio por partido)</h3>
-          <p class="small-note"><b>${esc(hn)}:</b> 🟨 ${fmt(h.yellow)} | 🟥 ${fmt(h.red)}</p>
-          <p class="small-note"><b>${esc(an)}:</b> 🟨 ${fmt(a.yellow)} | 🟥 ${fmt(a.red)}</p>
-          <div class="stat-value" style="text-align:center; margin-top:15px; color:#f59e0b;">
-            Total Tarjetas Estimadas: ${fmt(yt)}
-          </div>
-        </div>
-                             
+function inicializarApp() {
+  window.comprobarConexion = comprobarConexion; window.cargarPartidos = cargarPartidos;
+  window.analizarPartido = analizarPartido; window.mostrarPartidos = mostrarPartidos; window.tab = tab;
+  const b1 = $("btn-comprobar-conexion"), b2 = $("btn-cargar");
+  if (b1) b1.onclick = comprobarConexion; if (b2) b2.onclick = cargarPartidos;
+}
+document.addEventListener('deviceready', inicializarApp, false);
+document.addEventListener('DOMContentLoaded', inicializarApp, false);
