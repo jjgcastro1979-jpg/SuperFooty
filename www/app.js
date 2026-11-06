@@ -95,7 +95,7 @@ async function comprobarConexion() {
 }
 
 // ==========================================
-// 2. CARGAR PARTIDOS
+// 2. CARGAR PARTIDOS (CORREGIDO PARA EVITAR ERROR JSON)
 // ==========================================
 async function cargarPartidos() {
  const lista = document.getElementById('lista-partidos');
@@ -117,19 +117,26 @@ async function cargarPartidos() {
  const fechaSeleccionada = fechaInput.value;
  const liga = ligasFootballData[ligaId];
  
- const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches`;
+ // Enviamos el filtro de fecha explícito para que el proxy responda el JSON correcto
+ const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches?dateFrom=${fechaSeleccionada}&dateTo=${fechaSeleccionada}`;
 
  try {
   const response = await fetch(url, { method: 'GET', mode: 'cors' });
-  if (!response.ok) throw new Error(`Error (${response.status})`);
+  const textoRespuesta = await response.text();
+  
+  let data;
+  try {
+   data = JSON.parse(textoRespuesta);
+  } catch (e) {
+   lista.innerHTML = `<div class="info-box">No se encontraron encuentros para la liga <b>${escapeHTML(liga.nombre)}</b> en esta fecha (${fechaSeleccionada}). <br><br>💡 <b>Prueba cambiando la fecha al fin de semana (sábado o domingo).</b></div>`;
+   return;
+  }
 
-  const data = await response.json();
-  const todosLosPartidos = data.matches || [];
+  if (!response.ok) {
+   throw new Error(data.message || `Error (${response.status})`);
+  }
 
-  partidosActuales = todosLosPartidos.filter(partido => {
-   if (!partido.utcDate) return false;
-   return partido.utcDate.slice(0, 10) === fechaSeleccionada;
-  });
+  partidosActuales = data.matches || [];
 
   if (partidosActuales.length === 0) {
    lista.innerHTML = `<div class="info-box">No hay partidos para la liga <b>${escapeHTML(liga.nombre)}</b> el ${fechaSeleccionada}. ¡Prueba con el fin de semana!</div>`;
@@ -258,21 +265,15 @@ function cambiarTabAnalis(index, tabId, botonActivo) {
 }
 
 // ==========================================
-// 4. ANCLAJE ABSOLUTO DE BOTONES PARA MÓVIL
+// 4. VINCULACIÓN MÓVIL GLOBAL
 // ==========================================
 function forzarVinculacionMobile() {
  window.comprobarConexion = comprobarConexion;
  window.cargarPartidos = cargarPartidos;
  window.analizarPartidoConIA = analizarPartidoConIA;
  window.cambiarTabAnalis = cambiarTabAnalis;
-
- const btnConexion = document.getElementById('btn-comprobar-conexion') || document.querySelector('button[onclick*="comprobarConexion"]');
- const btnCargar = document.getElementById('btn-cargar') || document.querySelector('button[onclick*="cargarPartidos"]');
- 
- if (btnConexion) btnConexion.onclick = comprobarConexion;
- if (btnCargar) btnCargar.onclick = cargarPartidos;
 }
 
 document.addEventListener('deviceready', forzarVinculacionMobile, false);
 document.addEventListener('DOMContentLoaded', forzarVinculacionMobile, false);
-  
+             
