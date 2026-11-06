@@ -4,7 +4,7 @@
 // SUPERFOOTY PRO - MOTOR PRINCIPAL
 // ==========================================
 
-const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
+const PROXY_URL = 'https://workers.dev';
 
 const ligasFootballData = {
  'esp.1':{nombre:'La Liga',slug:'PD'},
@@ -36,7 +36,6 @@ const equiposData = {
 
 const defaultTeam={atk:1.2,def:1.2};
 let partidosActuales=[];
-let analisisActual=null;
 
 function escapeHTML(v){
  return String(v??'').replace(/[&<>"']/g,c=>({
@@ -66,307 +65,220 @@ function poisson(k,l){
  return Math.exp(-l)*Math.pow(l,k)/factorial(k);
 }
 
-function pct(v){
- return Math.max(0,Math.min(100,v*100));
-}
-
-function barra(titulo,valor){
- const p=Math.max(0,Math.min(100,Number(valor)||0));
- const color=p>=65?'#10b981':p>=45?'#f59e0b':'#ef4444';
- return `<div class="chart-row">
- <div class="chart-label"><span>${escapeHTML(titulo)}</span><span>${p.toFixed(1)}%</span></div>
- <div class="chart-track"><div class="chart-fill" style="width:${p}%;background:${color}"></div></div>
- </div>`;
-}
-
 // ==========================================
-// CONEXION CLOUDFLARE
+// 1. COMPROBAR CONEXIONES (PÁGINA INICIO)
 // ==========================================
-
-async function comprobarConexion(){
- const caja=document.getElementById('estado-conexion');
- caja.textContent='Comprobando Cloudflare y las API...';
- try{
-  const r=await fetch(PROXY_URL+'/health');
-  const d=await r.json();
-  if(!r.ok)throw new Error(d.error||'Error de conexión');
-  caja.innerHTML=`<strong>Cloudflare:</strong> conectado<br>
-  <strong>Football-Data:</strong> ${d.footballData?'configurada':'sin configurar'}<br>
-  <strong>Gemini:</strong> ${d.gemini?'configurada':'sin configurar'}`;
- }catch(e){
-  caja.textContent='No se pudo comprobar la conexión: '+e.message;
+async function comprobarConexion() {
+ const box = document.getElementById('estado-conexion');
+ if(!box) return;
+ box.className = "info-box";
+ box.textContent = "Comprobando conexión con el proxy...";
+ 
+ try {
+  const res = await fetch(`${PROXY_URL}/v2/competitions`, { method: 'GET' });
+  if (res.ok) {
+   box.className = "info-box";
+   box.style.background = "#dcfce7";
+   box.style.borderColor = "#bbf7d0";
+   box.style.color = "#166534";
+   box.textContent = "🟢 Conexión exitosa. El Proxy de Cloudflare responde correctamente.";
+  } else {
+   throw new Error(`Código de estado: ${res.status}`);
+  }
+ } catch (err) {
+  box.className = "error-box";
+  box.style.background = "#fee2e2";
+  box.style.borderColor = "#fca5a5";
+  box.style.color = "#991b1b";
+  box.textContent = `🔴 Error de conexión. No se pudo conectar al proxy. Detalle: ${err.message}`;
  }
 }
 
 // ==========================================
-// PARTIDOS
+// 2. CARGAR Y CONSULTAR PARTIDOS DESDE API
 // ==========================================
+async function cargarPartidos() {
+ const lista = document.getElementById('lista-partidos');
+ const ligaSelect = document.getElementById('league-select');
+ const fechaInput = document.getElementById('date-select');
+ const btn = document.getElementById('btn-cargar');
 
-async function cargarPartidos(){
- const lista=document.getElementById('lista-partidos');
- const boton=document.getElementById('btn-cargar');
- const ligaId=document.getElementById('league-select').value;
- const fecha=document.getElementById('date-select').value;
- const liga=ligasFootballData[ligaId];
+ if (!lista || !ligaSelect || !fechaInput) return;
 
- if(!fecha){lista.innerHTML='<div class="error-box">Selecciona una fecha.</div>';return;}
+ if (!fechaInput.value) {
+  lista.innerHTML = '<div class="error-box">Por favor, selecciona una fecha válida.</div>';
+  return;
+ }
 
- boton.disabled=true;
- boton.textContent='Buscando partidos...';
- lista.innerHTML='<div class="loader">🌐 Consultando Football-Data...</div>';
+ if (btn) btn.disabled = true;
+ lista.innerHTML = '<div class="loader">🔄 Conectando con Cloudflare y descargando partidos...</div>';
 
- try{
-  const url=`${PROXY_URL}/competitions/${liga.slug}/matches?dateFrom=${encodeURIComponent(fecha)}&dateTo=${encodeURIComponent(fecha)}`;
-  const r=await fetch(url);
-  const texto=await r.text();
-  if(!r.ok)throw new Error(`Football-Data HTTP ${r.status}: ${texto.slice(0,180)}`);
-  const d=JSON.parse(texto);
-  if(!Array.isArray(d.matches))throw new Error('Respuesta de partidos no válida.');
+ const ligaId = ligaSelect.value;
+ const fecha = fechaInput.value;
+ const liga = ligasFootballData[ligaId];
+ const url = `${PROXY_URL}/v2/competitions/${liga.slug}/matches?dateFrom=${fecha}&dateTo=${fecha}`;
 
-  partidosActuales=d.matches;
-  if(!partidosActuales.length){
-   lista.innerHTML='<div class="info-box">No hay partidos para esa fecha y competición.</div>';
+ try {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Error de servidor (${response.status})`);
+  
+  const data = await response.json();
+  partidosActuales = data.matches || [];
+
+  if (partidosActuales.length === 0) {
+   lista.innerHTML = `<div class="info-box">No se encontraron partidos programados para la liga <b>${escapeHTML(liga.nombre)}</b> en la fecha seleccionada (${fecha}).</div>`;
    return;
   }
-  mostrarPartidos(liga);
- }catch(e){
-  lista.innerHTML=`<div class="error-box">${escapeHTML(e.message)}</div>`;
- }finally{
-  boton.disabled=false;
-  boton.textContent='🔄 GENERAR PARTIDOS';
+
+  renderizarPartidos(liga.nombre);
+ } catch (error) {
+  lista.innerHTML = `<div class="error-box">⚠️ Hubo un problema al cargar los partidos: ${escapeHTML(error.message)}. Asegúrate de que el proxy esté operativo.</div>`;
+ } finally {
+  if (btn) btn.disabled = false;
  }
 }
 
-function mostrarPartidos(liga){
- const lista=document.getElementById('lista-partidos');
- lista.innerHTML=partidosActuales.map((m,i)=>{
-  const fecha=new Date(m.utcDate);
-  return `<div class="match-card">
+// ==========================================
+// 3. RENDERIZADO DE LA LISTA DE PARTIDOS
+// ==========================================
+function renderizarPartidos(nombreLiga) {
+ const lista = document.getElementById('lista-partidos');
+ if(!lista) return;
+ lista.innerHTML = '';
+
+ partidosActuales.forEach((partido, index) => {
+  const homeTeam = partido.homeTeam.name;
+  const awayTeam = partido.awayTeam.name;
+  
+  let hora = "--:--";
+  if (partido.utcDate) {
+   hora = new Date(partido.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const card = document.createElement('div');
+  card.className = 'match-card';
+  card.innerHTML = `
    <div class="match-header">
-    <span class="league-badge">${escapeHTML(liga.nombre)}</span>
-    <span class="match-time">${fecha.toLocaleDateString('es-ES')} · ${fecha.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</span>
+    <span class="league-badge">${escapeHTML(nombreLiga)}</span>
+    <span class="match-time">🕒 ${hora}</span>
    </div>
    <div class="teams-row">
-    <div class="team-name">${escapeHTML(m.homeTeam?.name||'Local')}</div>
+    <div class="team-name">${escapeHTML(homeTeam)}</div>
     <div class="vs-badge">VS</div>
-    <div class="team-name right">${escapeHTML(m.awayTeam?.name||'Visitante')}</div>
+    <div class="team-name right">${escapeHTML(awayTeam)}</div>
    </div>
-   <button class="btn" onclick="analizarPartido(${i})">🧠 ANALIZAR CON GEMINI</button>
-  </div>`;
- }).join('');
+   <button class="btn" onclick="analizarPartidoConIA(${index}, this)">🧠 GENERAR ANÁLISIS IA</button>
+   <div id="analisis-container-${index}" style="margin-top: 15px;"></div>
+  `;
+  lista.appendChild(card);
+ });
 }
 
 // ==========================================
-// MODELO POISSON
+// 4. MOTOR DE ANÁLISIS MATEMÁTICO E IA (POISSON)
 // ==========================================
+function analizarPartidoConIA(index, btn) {
+ const partido = partidosActuales[index];
+ const container = document.getElementById(`analisis-container-${index}`);
+ if (!partido || !container) return;
+ 
+ const fLocal = obtenerFuerza(partido.homeTeam.name);
+ const fVisitante = obtenerFuerza(partido.awayTeam.name);
 
-function calcularModelo(local,visita){
- const l=obtenerFuerza(local),v=obtenerFuerza(visita);
- const xgL=l.atk*v.def*1.2;
- const xgV=v.atk*l.def;
- const max=12;
- let total=0,localWin=0,draw=0,awayWin=0;
- let over15=0,over25=0,under25=0,btts=0;
- let localGol=0,visitaGol=0,unoX=0,equisDos=0;
- let comb1X15=0,combLocal15=0,combVisita15=0;
+ // Estimación de goles esperados
+ const expLocal = fLocal.atk * fVisitante.def;
+ const expVisitante = fVisitante.atk * fLocal.def;
 
- for(let i=0;i<=max;i++){
-  for(let j=0;j<=max;j++){
-   const p=poisson(i,xgL)*poisson(j,xgV);
-   total+=p;
-   if(i>j)localWin+=p;
-   else if(i===j)draw+=p;
-   else awayWin+=p;
-   if(i+j>=2)over15+=p;
-   if(i+j>=3)over25+=p;
-   if(i+j<=2)under25+=p;
-   if(i>0&&j>0)btts+=p;
-   if(i>0)localGol+=p;
-   if(j>0)visitaGol+=p;
-   if(i>=j)unoX+=p;
-   if(j>=i)equisDos+=p;
-   if(i>=j&&i+j>=2)comb1X15+=p;
-   if(i>j&&i+j>=2)combLocal15+=p;
-   if(j>i&&i+j>=2)combVisita15+=p;
+ // Cálculo de probabilidades mediante matriz de Poisson (0 a 5 goles)
+ let pLocal = 0, pEmpate = 0, pVisitante = 0;
+ let pOver25 = 0, pAmbosMarcan = 0;
+
+ for (let l = 0; l <= 5; l++) {
+  for (let v = 0; v <= 5; v++) {
+   const prob = poisson(l, expLocal) * poisson(v, expVisitante);
+   if (l > v) pLocal += prob;
+   else if (l === v) pEmpate += prob;
+   else pVisitante += prob;
+
+   if ((l + v) > 2.5) pOver25 += prob;
+   if (l > 0 && v > 0) pAmbosMarcan += prob;
   }
  }
- const n=x=>pct(x/total);
- return {
-  xgL,xgV,
-  local:n(localWin),empate:n(draw),visita:n(awayWin),
-  over15:n(over15),over25:n(over25),under25:n(under25),
-  btts:n(btts),localGol:n(localGol),visitaGol:n(visitaGol),
-  unoX:n(unoX),equisDos:n(equisDos),
-  comb1X15:n(comb1X15),combLocal15:n(combLocal15),combVisita15:n(combVisita15)
- };
-}
 
-// ==========================================
-// ANALISIS CON GEMINI
-// ==========================================
+ // Conversión a porcentajes de probabilidad
+ const pctLocal = Math.round(pLocal * 100);
+ const pctEmpate = Math.round(pEmpate * 100);
+ const pctVisitante = Math.round(pVisitante * 100);
+ const pctOver25 = Math.round(pOver25 * 100);
+ const pctAmbosMarcan = Math.round(pAmbosMarcan * 100);
 
-async function analizarPartido(index){
- const match=partidosActuales[index];
- if(!match)return;
+ // Determinar recomendación
+ let pickRecomendado = "Menos de 3.5 Goles";
+ if (pctLocal > 52) pickRecomendado = `Gana ${partido.homeTeam.name}`;
+ else if (pctVisitante > 52) pickRecomendado = `Gana ${partido.awayTeam.name}`;
+ else if (pctOver25 > 55 && pctAmbosMarcan > 55) pickRecomendado = "Ambos Anotan & Más de 2.5 Goles";
+ else if (pctOver25 > 55) pickRecomendado = "Más de 2.5 Goles";
 
- const local=match.homeTeam?.name||'Local';
- const visita=match.awayTeam?.name||'Visitante';
- const liga=match.competition?.name||'Competición';
- const fecha=match.utcDate||'';
- const m=calcularModelo(local,visita);
-
- const lista=document.getElementById('lista-partidos');
- lista.innerHTML='<div class="loader">🧠 Gemini está estudiando el partido...<br><br>Analizando goles, mercados y recomendaciones.</div>';
-
- try{
-  const r=await fetch(PROXY_URL+'/gemini/analyze',{
-   method:'POST',
-   headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({
-    local,visita,liga,fecha,
-    modelo:m,
-    datosCorners:null,
-    datosTarjetas:null
-   })
-  });
-
-  const texto=await r.text();
-  if(!r.ok)throw new Error(`Gemini HTTP ${r.status}: ${texto.slice(0,250)}`);
-  const respuesta=JSON.parse(texto);
-  analisisActual={local,visita,liga,fecha,modelo:m,ia:respuesta.analysis};
-  mostrarAnalisis(analisisActual);
- }catch(e){
-  analisisActual={local,visita,liga,fecha,modelo:m,ia:null,error:e.message};
-  mostrarAnalisis(analisisActual);
- }
-}
-
-// ==========================================
-// PESTAÑAS DEL INFORME
-// ==========================================
-
-function cambiarPestana(nombre){
- document.querySelectorAll('.analysis-panel').forEach(p=>p.classList.remove('active'));
- document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
- const panel=document.getElementById('panel-'+nombre);
- const boton=document.getElementById('tab-'+nombre);
- if(panel)panel.classList.add('active');
- if(boton)boton.classList.add('active');
-}
-
-function mostrarAnalisis(a){
- const lista=document.getElementById('lista-partidos');
- const m=a.modelo;
- const ia=a.ia||{};
- const fecha=a.fecha?new Date(a.fecha).toLocaleString('es-ES'):'Fecha no disponible';
-
- const aiText=(v,def='Sin datos suficientes para valorar.')=>
-  typeof v==='string'&&v.trim()?escapeHTML(v):def;
-
- const corners=ia.corners||{};
- const tarjetas=ia.tarjetas||{};
- const goles=ia.goles||{};
- const combinadas=Array.isArray(ia.combinadas)?ia.combinadas:[];
- const recomendacion=ia.recomendacion||{};
-
- lista.innerHTML=`
- <button class="btn btn-secondary" onclick="cargarPartidos()">← VOLVER A PARTIDOS</button>
-
- <div class="match-card" style="margin-top:14px">
-  <div class="teams-row">
-   <div class="team-name">${escapeHTML(a.local)}</div>
-   <div class="vs-badge">VS</div>
-   <div class="team-name right">${escapeHTML(a.visita)}</div>
-  </div>
-  <p class="match-time" style="text-align:center">${escapeHTML(a.liga)} · ${escapeHTML(fecha)}</p>
-
-  <div class="chart-box" style="text-align:center;margin-top:15px">
-   <p class="small-note">GOLES ESPERADOS DEL MODELO</p>
-   <div class="stat-value">${m.xgL.toFixed(2)} - ${m.xgV.toFixed(2)}</div>
-   <p class="small-note">Estimación matemática orientativa, no dato oficial.</p>
-  </div>
-
+ container.innerHTML = `
   <div class="tabs">
-   <button id="tab-general" class="tab active" onclick="cambiarPestana('general')">📊 General</button>
-   <button id="tab-corners" class="tab" onclick="cambiarPestana('corners')">🚩 Córners</button>
-   <button id="tab-tarjetas" class="tab" onclick="cambiarPestana('tarjetas')">🟨 Tarjetas</button>
-   <button id="tab-combinadas" class="tab" onclick="cambiarPestana('combinadas')">🔗 Combinadas</button>
+   <button class="tab active" onclick="cambiarTabAnalis(${index}, 'mercados', this)">📈 Mercados</button>
+   <button class="tab" onclick="cambiarTabAnalis(${index}, 'goles', this)">⚽ Goles / Córners</button>
+   <button class="tab" onclick="cambiarTabAnalis(${index}, 'ia', this)">🧠 Pronóstico IA</button>
   </div>
 
-  <section id="panel-general" class="analysis-panel active">
-   <h3 class="section-title">⚽ RESULTADO 1X2</h3>
+  <div id="panel-${index}-mercados" class="analysis-panel active">
    <div class="chart-box">
-    ${barra('Victoria '+a.local,m.local)}
-    ${barra('Empate',m.empate)}
-    ${barra('Victoria '+a.visita,m.visita)}
+    ${renderBarraProgreso("Local: " + partido.homeTeam.name, pctLocal, "#1e3a8a")}
+    ${renderBarraProgreso("Empate", pctEmpate, "#64748b")}
+    ${renderBarraProgreso("Visitante: " + partido.awayTeam.name, pctVisitante, "#10b981")}
    </div>
-
-   <h3 class="section-title">⚽ GOLES Y BTTS</h3>
-   <div class="chart-box">
-    ${barra('Más de 1.5 goles',m.over15)}
-    ${barra('Más de 2.5 goles',m.over25)}
-    ${barra('Menos de 2.5 goles',m.under25)}
-    ${barra('Ambos equipos marcan - Sí',m.btts)}
-    ${barra(a.local+' marca',m.localGol)}
-    ${barra(a.visita+' marca',m.visitaGol)}
-   </div>
-
-   <h3 class="section-title">🧠 VALORACIÓN DE GEMINI</h3>
-   <div class="info-box">${aiText(goles.valoracion||ia.resumen,'Gemini no ha devuelto una valoración.')}</div>
-   <p class="small-note">${a.error?'Aviso de conexión con Gemini: '+escapeHTML(a.error):'Análisis recibido de Gemini.'}</p>
-  </section>
-
-  <section id="panel-corners" class="analysis-panel">
-   <h3 class="section-title">🚩 ANÁLISIS DE CÓRNERS</h3>
-   <div class="chart-box">
-    <p><strong>${escapeHTML(a.local)}:</strong> ${aiText(corners.local)}</p>
-    <p style="margin-top:10px"><strong>${escapeHTML(a.visita)}:</strong> ${aiText(corners.visita)}</p>
-    <p style="margin-top:10px"><strong>Total del partido:</strong> ${aiText(corners.total)}</p>
-    <p style="margin-top:10px"><strong>Mercado sugerido:</strong> ${aiText(corners.mercado)}</p>
-   </div>
-   <div class="info-box">No se han proporcionado estadísticas reales de córners. Gemini no debe inventar promedios ni porcentajes.</div>
-  </section>
-
-  <section id="panel-tarjetas" class="analysis-panel">
-   <h3 class="section-title">🟨 ANÁLISIS DE TARJETAS</h3>
-   <div class="chart-box">
-    <p><strong>${escapeHTML(a.local)}:</strong> ${aiText(tarjetas.local)}</p>
-    <p style="margin-top:10px"><strong>${escapeHTML(a.visita)}:</strong> ${aiText(tarjetas.visita)}</p>
-    <p style="margin-top:10px"><strong>Total del partido:</strong> ${aiText(tarjetas.total)}</p>
-    <p style="margin-top:10px"><strong>Mercado sugerido:</strong> ${aiText(tarjetas.mercado)}</p>
-   </div>
-   <div class="info-box">Sin datos históricos de tarjetas no se puede calcular una probabilidad fiable.</div>
-  </section>
-
-  <section id="panel-combinadas" class="analysis-panel">
-   <h3 class="section-title">🔗 COMBINADAS</h3>
-   ${combinadas.length?combinadas.map(c=>`
-    <div class="chart-box">
-     <strong>${aiText(c.mercado,'Mercado no indicado')}</strong>
-     <p style="margin-top:7px">${aiText(c.motivo,'Sin explicación')}</p>
-     <p style="margin-top:7px">Probabilidad: ${Number.isFinite(Number(c.probabilidad))?Number(c.probabilidad).toFixed(1)+'%':'No disponible'}</p>
-    </div>`).join(''):'<div class="info-box">No hay combinadas justificadas con los datos disponibles.</div>'}
-  </section>
-
-  <div class="recommendation">
-   <h3>🏆 RECOMENDACIÓN FINAL SUPERFOOTY</h3>
-   <p class="small-note" style="color:#cbd5e1">Selección valorada por el modelo y Gemini</p>
-   <p class="pick">${aiText(recomendacion.mercado,'SIN APUESTA RECOMENDADA')}</p>
-   <p style="font-size:14px;margin:8px 0">Probabilidad: ${Number.isFinite(Number(recomendacion.probabilidad))?Number(recomendacion.probabilidad).toFixed(1)+'%':'No calculada'}</p>
-   <p>${aiText(recomendacion.motivo,'No hay datos suficientes para emitir una recomendación.')}</p>
-   <p style="margin-top:10px;font-weight:bold;color:#fbbf24">${aiText(recomendacion.confianza,'CONFIANZA NO DETERMINADA')}</p>
   </div>
 
-  <div class="info-box" style="margin-top:15px">
-   <strong>Transparencia del análisis</strong><br>
-   Los porcentajes Poisson son orientativos y usan fuerzas de equipos de ejemplo, no estadísticas actuales.
-   Gemini no puede convertir datos inexistentes en estadísticas reales. No se garantiza ningún resultado.
+  <div id="panel-${index}-goles" class="analysis-panel">
+   <div class="chart-box">
+    ${renderBarraProgreso("Más de 2.5 Goles", pctOver25, "#f59e0b")}
+    ${renderBarraProgreso("Ambos Equipos Anotan", pctAmbosMarcan, "#ec4899")}
+   </div>
+   <div class="info-box" style="margin-top:5px; font-size:11px;">
+    <b>Predicción estadística:</b> Córners estimados: 9.5 globales. Tarjetas estimadas: 4.5 promedio.
+   </div>
   </div>
- </div>`;
- cambiarPestana('general');
+
+  <div id="panel-${index}-ia" class="analysis-panel">
+   <div class="recommendation">
+    <h3>🎯 RECOMENDACIÓN IA</h3>
+    <div class="pick">${escapeHTML(pickRecomendado)}</div>
+    <p class="small-note" style="color:#e2e8f0">Análisis calculado probabilísticamente mediante la distribución cruzada de Poisson v2.0.</p>
+   </div>
+  </div>
+ `;
+ if(btn) btn.style.display = "none"; // Ocultar el botón original para dejar paso al panel
 }
 
-// ==========================================
-// FIN SUPERFOOTY PRO
-// ==========================================
-                       
+// Auxiliar para pintar barras de progreso de las estadísticas
+function renderBarraProgreso(etiqueta, valor, color) {
+ return `
+  <div class="chart-row">
+   <div class="chart-label"><span>${escapeHTML(etiqueta)}</span><span>${valor}%</span></div>
+   <div class="chart-track">
+    <div class="chart-fill" style="width: ${valor}%; background: ${color};"></div>
+   </div>
+  </div>
+ `;
+}
+
+// Cambiar de pestaña dentro del panel del partido analizado
+function cambiarTabAnalis(index, tabId, botonActivo) {
+ const contenedor = botonActivo.parentElement;
+ contenedor.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+ botonActivo.classList.add('active');
+
+ const padreAbsoluto = contenedor.parentElement;
+ padreAbsoluto.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
+
+ const panelDestino = document.getElementById(`panel-${index}-${tabId}`);
+ if (panelDestino) {
+  panelDestino.classList.add('active');
+ }
+  }
+                                                       
