@@ -1,65 +1,44 @@
 'use strict';
 
-// ==========================================
-// SUPERFOOTY PRO - MOTOR PRINCIPAL CON GEMINI IA
-// ==========================================
-
 const PROXY_URL = 'https://workers.dev';
 
 const ligasFootballData = {
- 'esp.1':{nombre:'La Liga',slug:'PD'},
- 'eng.1':{nombre:'Premier League',slug:'PL'},
- 'ita.1':{nombre:'Serie A',slug:'SA'},
- 'ger.1':{nombre:'Bundesliga',slug:'BL1'},
- 'fra.1':{nombre:'Ligue 1',slug:'FL1'}
+ 'esp.1':{nombre:'La Liga',slug:'PD'}, 'eng.1':{nombre:'Premier League',slug:'PL'},
+ 'ita.1':{nombre:'Serie A',slug:'SA'}, 'ger.1':{nombre:'Bundesliga',slug:'BL1'}, 'fra.1':{nombre:'Ligue 1',slug:'FL1'}
 };
 
 const equiposData = {
  'Real Madrid':{atk:2.1,def:.8}, 'Barcelona':{atk:2,def:1}, 'Atletico':{atk:1.6,def:.7},
  'Athletic':{atk:1.4,def:.9}, 'Real Sociedad':{atk:1.3,def:1}, 'Betis':{atk:1.3,def:1.2},
  'Sevilla':{atk:1.1,def:1.3}, 'Valencia':{atk:1.1,def:1.2}, 'Villarreal':{atk:1.5,def:1.3},
- 'Getafe':{atk:.8,def:1.1}, 'Osasuna':{atk:1,def:1.1}, 'Man City':{atk:2.2,def:.9},
- 'Arsenal':{atk:1.9,def:.8}, 'Liverpool':{atk:1.8,def:1}, 'Chelsea':{atk:1.5,def:1.1},
- 'Man United':{atk:1.3,def:1.2}, 'Tottenham':{atk:1.5,def:1.3}
+ 'Man City':{atk:2.2,def:.9}, 'Arsenal':{atk:1.9,def:.8}, 'Liverpool':{atk:1.8,def:1}
 };
 
-const defaultTeam={atk:1.2,def:1.2};
 let partidosActuales=[];
+const escapeHTML = v => String(v??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const normalizarTexto = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
-function escapeHTML(v){
- return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function normalizarTexto(t){
- return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-}
 function obtenerFuerza(nombre){
- const n=normalizarTexto(nombre);
- for(const k in equiposData){ if(n.includes(normalizarTexto(k)))return equiposData[k]; }
- return defaultTeam;
+ const n = normalizarTexto(nombre);
+ for(const k in equiposData){ if(n.includes(normalizarTexto(k))) return equiposData[k]; }
+ return {atk:1.2,def:1.2};
 }
-function factorial(n){
- let r=1; for(let i=2;i<=n;i++)r*=i; return r;
-}
-function poisson(k,l){
- return Math.exp(-l)*Math.pow(l,k)/factorial(k);
-}
+function factorial(n){ let r=1; for(let i=2;i<=n;i++) r*=i; return r; }
+function poisson(k,l){ return Math.exp(-l)*Math.pow(l,k)/factorial(k); }
 
 // 1. COMPROBAR CONEXIÓN
 async function comprobarConexion() {
  const box = document.getElementById('estado-conexion');
  if(!box) return;
- box.className = "info-box";
- box.textContent = "Comprobando conexión...";
+ box.className = "info-box"; box.textContent = "Comprobando conexión...";
  try {
   const res = await fetch(`${PROXY_URL}/v4/competitions`, { method: 'GET' });
   if (res.ok) {
-   box.className = "info-box";
-   box.style.background = "#dcfce7"; box.style.borderColor = "#bbf7d0"; box.style.color = "#166534";
+   box.className = "info-box"; box.style.background = "#dcfce7"; box.style.borderColor = "#bbf7d0"; box.style.color = "#166534";
    box.textContent = "🟢 Conexión exitosa con Cloudflare Worker.";
   } else { throw new Error(`Estado: ${res.status}`); }
  } catch (err) {
-  box.className = "error-box";
-  box.style.background = "#fee2e2"; box.style.borderColor = "#fca5a5"; box.style.color = "#991b1b";
+  box.className = "error-box"; box.style.background = "#fee2e2"; box.style.borderColor = "#fca5a5"; box.style.color = "#991b1b";
   box.textContent = `🔴 Fallo de red: ${err.message}`;
  }
 }
@@ -74,47 +53,36 @@ async function cargarPartidos() {
  if (!fechaInput.value) { lista.innerHTML = '<div class="error-box">Selecciona una fecha válida.</div>'; return; }
  
  if (btn) btn.disabled = true;
- lista.innerHTML = '<div class="loader">🔄 Descargando partidos reales...</div>';
-
- const ligaId = ligaSelect.value;
- const fechaSeleccionada = fechaInput.value;
- const liga = ligasFootballData[ligaId];
- const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches?dateFrom=${fechaSeleccionada}&dateTo=${fechaSeleccionada}`;
+ lista.innerHTML = '<div class="loader">🔄 Descargando partidos...</div>';
+ const liga = ligasFootballData[ligaSelect.value];
+ const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches?dateFrom=${fechaInput.value}&dateTo=${fechaInput.value}`;
 
  try {
   const response = await fetch(url, { method: 'GET', mode: 'cors' });
-  const textoRespuesta = await response.text();
-  let data;
-  try { data = JSON.parse(textoRespuesta); } catch (e) {
-   lista.innerHTML = `<div class="info-box">No se encontraron encuentros en esta fecha (${fechaSeleccionada}). <br><br>💡 Cambia la fecha en el selector a una jornada de liga real.</div>`;
-   return;
-  }
+  const data = await response.json();
   if (!response.ok) throw new Error(data.message || `Error (${response.status})`);
   partidosActuales = data.matches || [];
   if (partidosActuales.length === 0) {
-   lista.innerHTML = `<div class="info-box">No hay partidos para la liga <b>${escapeHTML(liga.nombre)}</b> el ${fechaSeleccionada}.</div>`;
+   lista.innerHTML = `<div class="info-box">No hay partidos programados para <b>${escapeHTML(liga.nombre)}</b> en esta fecha. Intenta cambiando el día en el calendario.</div>`;
    return;
   }
   renderizarPartidos(liga.nombre);
- } catch (error) {
-  lista.innerHTML = `<div class="error-box">⚠️ Error: ${escapeHTML(error.message)}</div>`;
- } finally { if (btn) btn.disabled = false; }
+ } catch (error) { lista.innerHTML = `<div class="error-box">⚠️ Error: ${escapeHTML(error.message)}</div>`; }
+ finally { if (btn) btn.disabled = false; }
 }
 
-// 3. RENDERIZADO DE PARTIDOS
+// 3. RENDERIZADO E IA POISSON + GEMINI
 function renderizarPartidos(nombreLiga) {
  const lista = document.getElementById('lista-partidos');
  if(!lista) return; lista.innerHTML = '';
  partidosActuales.forEach((partido, index) => {
-  const homeTeam = partido.homeTeam.name;
-  const awayTeam = partido.awayTeam.name;
   let hora = "Pénd.";
   if (partido.utcDate) hora = new Date(partido.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const card = document.createElement('div');
   card.className = 'match-card';
   card.innerHTML = `
    <div class="match-header"><span class="league-badge">${escapeHTML(nombreLiga)}</span><span class="match-time">🕒 ${hora}</span></div>
-   <div class="teams-row"><div class="team-name">${escapeHTML(homeTeam)}</div><div class="vs-badge">VS</div><div class="team-name right">${escapeHTML(awayTeam)}</div></div>
+   <div class="teams-row"><div class="team-name">${escapeHTML(partido.homeTeam.name)}</div><div class="vs-badge">VS</div><div class="team-name right">${escapeHTML(partido.awayTeam.name)}</div></div>
    <button class="btn" onclick="analizarPartidoConIA(${index}, this)">🧠 ANALIZAR CON IA</button>
    <div id="analisis-container-${index}" style="margin-top: 15px;"></div>
   `;
@@ -122,17 +90,13 @@ function renderizarPartidos(nombreLiga) {
  });
 }
 
-// 4. MOTOR MATEMÁTICO DE POISSON E INTEGRACIÓN DE GEMINI
 async function analizarPartidoConIA(index, btn) {
  const partido = partidosActuales[index];
  const container = document.getElementById(`analisis-container-${index}`);
  if (!partido || !container) return;
-
- const fLocal = obtenerFuerza(partido.homeTeam.name);
- const fVisitante = obtenerFuerza(partido.awayTeam.name);
- const expLocal = fLocal.atk * fVisitante.def; const expVisitante = fVisitante.atk * fLocal.def;
+ const fLocal = obtenerFuerza(partido.homeTeam.name), fVisitante = obtenerFuerza(partido.awayTeam.name);
+ const expLocal = fLocal.atk * fVisitante.def, expVisitante = fVisitante.atk * fLocal.def;
  let pLocal = 0, pEmpate = 0, pVisitante = 0, pOver25 = 0, pAmbosMarcan = 0;
- 
  for (let l = 0; l <= 5; l++) {
   for (let v = 0; v <= 5; v++) {
    const prob = poisson(l, expLocal) * poisson(v, expVisitante);
@@ -140,14 +104,8 @@ async function analizarPartidoConIA(index, btn) {
    if ((l + v) > 2.5) pOver25 += prob; if (l > 0 && v > 0) pAmbosMarcan += prob;
   }
  }
- const pctLocal = Math.round(pLocal * 100); const pctEmpate = Math.round(pEmpate * 100); const pctVisitante = Math.round(pVisitante * 100);
- const pctOver25 = Math.round(pOver25 * 100); const pctAmbosMarcan = Math.round(pAmbosMarcan * 100);
-
- let pickRecomendado = "Menos de 3.5 Goles";
- if (pctLocal > 52) pickRecomendado = `Gana ${partido.homeTeam.name}`;
- else if (pctVisitante > 52) pickRecomendado = `Gana ${partido.awayTeam.name}`;
- else if (pctOver25 > 55 && pctAmbosMarcan > 55) pickRecomendado = "Ambos Marcan & Más de 2.5 Goles";
- else if (pctOver25 > 55) pickRecomendado = "Más de 2.5 Goles";
+ const pctLocal = Math.round(pLocal * 100), pctEmpate = Math.round(pEmpate * 100), pctVisitante = Math.round(pVisitante * 100);
+ const pctOver25 = Math.round(pOver25 * 100), pctAmbosMarcan = Math.round(pAmbosMarcan * 100);
 
  container.innerHTML = `
   <div class="tabs">
@@ -157,52 +115,39 @@ async function analizarPartidoConIA(index, btn) {
   </div>
   <div id="panel-${index}-mercados" class="analysis-panel active"><div class="chart-box">${renderBarraProgreso("Local", pctLocal, "#1e3a8a")}${renderBarraProgreso("Empate", pctEmpate, "#64748b")}${renderBarraProgreso("Visitante", pctVisitante, "#10b981")}</div></div>
   <div id="panel-${index}-goles" class="analysis-panel"><div class="chart-box">${renderBarraProgreso("Más de 2.5 Goles", pctOver25, "#f59e0b")}${renderBarraProgreso("Ambos Anotan", pctAmbosMarcan, "#ec4899")}</div></div>
-  <div id="panel-${index}-ia" class="analysis-panel"><div class="recommendation"><h3>🧠 ANÁLISIS EXPERTO GEMINI AI</h3><div id="gemini-texto-${index}" class="small-note" style="color:#f8fafc; text-align:left; font-size:12px; line-height:1.4; margin-top:10px;">⏳ Consultando con la red neuronal de Gemini...</div></div></div>
+  <div id="panel-${index}-ia" class="analysis-panel"><div class="recommendation"><h3>🧠 ANÁLISIS EXPERTO GEMINI AI</h3><div id="gemini-texto-${index}" class="small-note" style="color:#f8fafc; text-align:left; font-size:12px; line-height:1.4; margin-top:10px;">⏳ Procesando veredicto con Gemini...</div></div></div>
  `;
  if(btn) btn.style.display = "none";
 
- // Ejecutar llamada en segundo plano a la API de Gemini
  try {
-  const indicacionesIA = `Analiza el partido entre ${partido.homeTeam.name} y ${partido.awayTeam.name}. Probabilidades: Victoria Local ${pctLocal}%, Empate ${pctEmpate}%, Victoria Visitante ${pctVisitante}%. Más de 2.5 goles: ${pctOver25}%. Genera un pronóstico muy breve de 2 líneas con mercados lógicos.`;
-  const iaResponse = await fetch(`${PROXY_URL}/v1/gemini`, { 
-   method: 'POST', 
-   headers: { 'Content-Type': 'application/json' },
-   body: JSON.stringify({ prompt: indicacionesIA }) 
-  });
-  const iaData = await iaResponse.json();
-  const cuadroTexto = document.getElementById(`gemini-texto-${index}`);
-  if (cuadroTexto && iaData.analisis) {
-   cuadroTexto.textContent = iaData.analisis;
-  }
+  const prompt = `Analiza: ${partido.homeTeam.name} vs ${partido.awayTeam.name}. Poisson: Local ${pctLocal}%, Empate ${pctEmpate}%, Visitante ${pctVisitante}%. Más de 2.5: ${pctOver25}%. Danos un pronóstico muy corto de 2 líneas con mercados lógicos recomendados.`;
+  const res = await fetch(`${PROXY_URL}/v1/gemini`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+  const data = await res.json();
+  const boxText = document.getElementById(`gemini-texto-${index}`);
+  if (boxText && data.analisis) boxText.textContent = data.analisis;
  } catch (err) {
-  const cuadroTexto = document.getElementById(`gemini-texto-${index}`);
-  if (cuadroTexto) cuadroTexto.textContent = "Modo offline activo: Pronóstico básico sugerido -> " + pickRecomendado;
+  const boxText = document.getElementById(`gemini-texto-${index}`);
+  if (boxText) boxText.textContent = "Modo offline probabilístico activo.";
  }
 }
 
-function renderBarraProgreso(e, v, c) {
- return `<div class="chart-row"><div class="chart-label"><span>${escapeHTML(e)}</span><span>${v}%</span></div><div class="chart-track"><div class="chart-fill" style="width: ${v}%; background: ${c};"></div></div></div>`;
-}
+const renderBarraProgreso = (e, v, c) => `<div class="chart-row"><div class="chart-label"><span>${escapeHTML(e)}</span><span>${v}%</span></div><div class="chart-track"><div class="chart-fill" style="width: ${v}%; background: ${c};"></div></div></div>`;
 
-// 5. CAMBIO INTERACTIVO DE PESTAÑAS (CORREGIDO GLOBAL)
 function cambiarTabAnalis(index, tabId, botonActivo) {
- const contenedorTabs = botonActivo.parentElement;
- contenedorTabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
- botonActivo.classList.add('active');
-
- const contenedorPrincipal = contenedorTabs.parentElement;
- contenedorPrincipal.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
-
- const panelDestino = document.getElementById(`panel-${index}-${tabId}`);
- if (panelDestino) {
-  panelDestino.classList.add('active');
- }
+ const cTabs = botonActivo.parentElement;
+ cTabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); botonActivo.classList.add('active');
+ cTabs.parentElement.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
+ const pDestino = document.getElementById(`panel-${index}-${tabId}`); if (pDestino) pDestino.classList.add('active');
 }
 
-// 6. ENRUTADOR NATIVO CORDOVA
+// 4. VINCULACIÓN ABSOLUTA NATIVA GLOBAL
 function inicializarApp() {
- window.comprobarConexion = comprobarConexion;
- window.cargarPartidos = cargarPartidos;
- window.analizarPartidoConIA = analizarPartidoConIA;
- window.cambiarTabAnalis = cambiarTabAnalis;
-
+ window.comprobarConexion = comprobarConexion; window.cargarPartidos = cargarPartidos;
+ window.analizarPartidoConIA = analizarPartidoConIA; window.cambiarTabAnalis = cambiarTabAnalis;
+ const bConexion = document.getElementById('btn-comprobar-conexion'), bCargar = document.getElementById('btn-cargar');
+ if (bConexion) bConexion.onclick = comprobarConexion;
+ if (bCargar) bCargar.onclick = cargarPartidos;
+}
+document.addEventListener('deviceready', inicializarApp, false);
+document.addEventListener('DOMContentLoaded', inicializarApp, false);
+                                                     
