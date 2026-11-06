@@ -1,5 +1,9 @@
 'use strict';
 
+// ==========================================
+// SUPERFOOTY PRO - MOTOR PRINCIPAL CON GEMINI IA
+// ==========================================
+
 const PROXY_URL = 'https://workers.dev';
 
 const ligasFootballData = {
@@ -70,7 +74,7 @@ async function cargarPartidos() {
  if (!fechaInput.value) { lista.innerHTML = '<div class="error-box">Selecciona una fecha válida.</div>'; return; }
  
  if (btn) btn.disabled = true;
- lista.innerHTML = '<div class="loader">🔄 Descargando partidos...</div>';
+ lista.innerHTML = '<div class="loader">🔄 Descargando partidos reales...</div>';
 
  const ligaId = ligaSelect.value;
  const fechaSeleccionada = fechaInput.value;
@@ -82,7 +86,7 @@ async function cargarPartidos() {
   const textoRespuesta = await response.text();
   let data;
   try { data = JSON.parse(textoRespuesta); } catch (e) {
-   lista.innerHTML = `<div class="info-box">No se encontraron encuentros para la liga <b>${escapeHTML(liga.nombre)}</b> en esta fecha (${fechaSeleccionada}). <br><br>💡 Cambia la fecha al fin de semana.</div>`;
+   lista.innerHTML = `<div class="info-box">No se encontraron encuentros en esta fecha (${fechaSeleccionada}). <br><br>💡 Cambia la fecha en el selector a una jornada de liga real.</div>`;
    return;
   }
   if (!response.ok) throw new Error(data.message || `Error (${response.status})`);
@@ -97,7 +101,7 @@ async function cargarPartidos() {
  } finally { if (btn) btn.disabled = false; }
 }
 
-// 3. RENDERIZADO E IA POISSON
+// 3. RENDERIZADO DE PARTIDOS
 function renderizarPartidos(nombreLiga) {
  const lista = document.getElementById('lista-partidos');
  if(!lista) return; lista.innerHTML = '';
@@ -118,14 +122,17 @@ function renderizarPartidos(nombreLiga) {
  });
 }
 
+// 4. MOTOR MATEMÁTICO DE POISSON E INTEGRACIÓN DE GEMINI
 async function analizarPartidoConIA(index, btn) {
  const partido = partidosActuales[index];
  const container = document.getElementById(`analisis-container-${index}`);
  if (!partido || !container) return;
+
  const fLocal = obtenerFuerza(partido.homeTeam.name);
  const fVisitante = obtenerFuerza(partido.awayTeam.name);
  const expLocal = fLocal.atk * fVisitante.def; const expVisitante = fVisitante.atk * fLocal.def;
  let pLocal = 0, pEmpate = 0, pVisitante = 0, pOver25 = 0, pAmbosMarcan = 0;
+ 
  for (let l = 0; l <= 5; l++) {
   for (let v = 0; v <= 5; v++) {
    const prob = poisson(l, expLocal) * poisson(v, expVisitante);
@@ -136,6 +143,12 @@ async function analizarPartidoConIA(index, btn) {
  const pctLocal = Math.round(pLocal * 100); const pctEmpate = Math.round(pEmpate * 100); const pctVisitante = Math.round(pVisitante * 100);
  const pctOver25 = Math.round(pOver25 * 100); const pctAmbosMarcan = Math.round(pAmbosMarcan * 100);
 
+ let pickRecomendado = "Menos de 3.5 Goles";
+ if (pctLocal > 52) pickRecomendado = `Gana ${partido.homeTeam.name}`;
+ else if (pctVisitante > 52) pickRecomendado = `Gana ${partido.awayTeam.name}`;
+ else if (pctOver25 > 55 && pctAmbosMarcan > 55) pickRecomendado = "Ambos Marcan & Más de 2.5 Goles";
+ else if (pctOver25 > 55) pickRecomendado = "Más de 2.5 Goles";
+
  container.innerHTML = `
   <div class="tabs">
    <button class="tab active" onclick="cambiarTabAnalis(${index}, 'mercados', this)">📈 Mercados</button>
@@ -144,45 +157,52 @@ async function analizarPartidoConIA(index, btn) {
   </div>
   <div id="panel-${index}-mercados" class="analysis-panel active"><div class="chart-box">${renderBarraProgreso("Local", pctLocal, "#1e3a8a")}${renderBarraProgreso("Empate", pctEmpate, "#64748b")}${renderBarraProgreso("Visitante", pctVisitante, "#10b981")}</div></div>
   <div id="panel-${index}-goles" class="analysis-panel"><div class="chart-box">${renderBarraProgreso("Más de 2.5 Goles", pctOver25, "#f59e0b")}${renderBarraProgreso("Ambos Anotan", pctAmbosMarcan, "#ec4899")}</div></div>
-  <div id="panel-${index}-ia" class="analysis-panel"><div class="recommendation"><h3>🧠 ANÁLISIS EXPERTO GEMINI AI</h3><div id="gemini-texto-${index}" class="small-note" style="color:#f8fafc; text-align:left; font-size:12px; line-height:1.4; margin-top:10px;">⏳ Consultando con Gemini...</div></div></div>
+  <div id="panel-${index}-ia" class="analysis-panel"><div class="recommendation"><h3>🧠 ANÁLISIS EXPERTO GEMINI AI</h3><div id="gemini-texto-${index}" class="small-note" style="color:#f8fafc; text-align:left; font-size:12px; line-height:1.4; margin-top:10px;">⏳ Consultando con la red neuronal de Gemini...</div></div></div>
  `;
  if(btn) btn.style.display = "none";
 
+ // Ejecutar llamada en segundo plano a la API de Gemini
  try {
-  const indicacionesIA = `Analiza el partido entre ${partido.homeTeam.name} y ${partido.awayTeam.name}. Victoria Local ${pctLocal}%, Empate ${pctEmpate}%, Victoria Visitante ${pctVisitante}%. Más de 2.5 goles: ${pctOver25}%. Genera un pronóstico muy breve de 2 líneas con mercados recomendados.`;
-  const iaResponse = await fetch(`${PROXY_URL}/v1/gemini`, { method: 'POST', body: JSON.stringify({ prompt: indicacionesIA }) });
+  const indicacionesIA = `Analiza el partido entre ${partido.homeTeam.name} y ${partido.awayTeam.name}. Probabilidades: Victoria Local ${pctLocal}%, Empate ${pctEmpate}%, Victoria Visitante ${pctVisitante}%. Más de 2.5 goles: ${pctOver25}%. Genera un pronóstico muy breve de 2 líneas con mercados lógicos.`;
+  const iaResponse = await fetch(`${PROXY_URL}/v1/gemini`, { 
+   method: 'POST', 
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ prompt: indicacionesIA }) 
+  });
   const iaData = await iaResponse.json();
   const cuadroTexto = document.getElementById(`gemini-texto-${index}`);
-  if (cuadroTexto && iaData.analisis) cuadroTexto.textContent = iaData.analisis;
+  if (cuadroTexto && iaData.analisis) {
+   cuadroTexto.textContent = iaData.analisis;
+  }
  } catch (err) {
   const cuadroTexto = document.getElementById(`gemini-texto-${index}`);
-  if (cuadroTexto) cuadroTexto.textContent = "Modo offline probabilístico activo.";
+  if (cuadroTexto) cuadroTexto.textContent = "Modo offline activo: Pronóstico básico sugerido -> " + pickRecomendado;
  }
 }
 
 function renderBarraProgreso(e, v, c) {
  return `<div class="chart-row"><div class="chart-label"><span>${escapeHTML(e)}</span><span>${v}%</span></div><div class="chart-track"><div class="chart-fill" style="width: ${v}%; background: ${c};"></div></div></div>`;
 }
+
+// 5. CAMBIO INTERACTIVO DE PESTAÑAS (CORREGIDO GLOBAL)
 function cambiarTabAnalis(index, tabId, botonActivo) {
- const contenedor = botonActivo.parentElement;
- contenedor.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); botonActivo.classList.add('active');
- contenedor.parentElement.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
- const panelDestino = document.getElementById(`panel-${index}-${tabId}`); if (panelDestino) panelDestino.classList.add('active');
+ const contenedorTabs = botonActivo.parentElement;
+ contenedorTabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+ botonActivo.classList.add('active');
+
+ const contenedorPrincipal = contenedorTabs.parentElement;
+ contenedorPrincipal.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
+
+ const panelDestino = document.getElementById(`panel-${index}-${tabId}`);
+ if (panelDestino) {
+  panelDestino.classList.add('active');
+ }
 }
 
-// 4. VINCULACIÓN ABSOLUTA NATIVA
+// 6. ENRUTADOR NATIVO CORDOVA
 function inicializarApp() {
  window.comprobarConexion = comprobarConexion;
  window.cargarPartidos = cargarPartidos;
  window.analizarPartidoConIA = analizarPartidoConIA;
  window.cambiarTabAnalis = cambiarTabAnalis;
 
- const btnConexion = document.getElementById('btn-comprobar-conexion');
- const btnCargar = document.getElementById('btn-cargar');
- if (btnConexion) btnConexion.onclick = comprobarConexion;
- if (btnCargar) btnCargar.onclick = cargarPartidos;
-}
-
-document.addEventListener('deviceready', inicializarApp, false);
-document.addEventListener('DOMContentLoaded', inicializarApp, false);
-                                          
