@@ -4,7 +4,7 @@
 // SUPERFOOTY PRO - MOTOR PRINCIPAL DEFINITIVO
 // ==========================================
 
-const PROXY_URL = 'https://workers.dev';
+const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
 
 const ligasFootballData = {
  'esp.1':{nombre:'La Liga',slug:'PD'},
@@ -95,7 +95,7 @@ async function comprobarConexion() {
 }
 
 // ==========================================
-// 2. CARGAR PARTIDOS (CORREGIDO PARA EVITAR ERROR JSON)
+// 2. CARGAR PARTIDOS
 // ==========================================
 async function cargarPartidos() {
  const lista = document.getElementById('lista-partidos');
@@ -117,7 +117,7 @@ async function cargarPartidos() {
  const fechaSeleccionada = fechaInput.value;
  const liga = ligasFootballData[ligaId];
  
- // Enviamos el filtro de fecha explícito para que el proxy responda el JSON correcto
+ // Consultamos pasando el parámetro de la fecha seleccionada
  const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches?dateFrom=${fechaSeleccionada}&dateTo=${fechaSeleccionada}`;
 
  try {
@@ -128,7 +128,7 @@ async function cargarPartidos() {
   try {
    data = JSON.parse(textoRespuesta);
   } catch (e) {
-   lista.innerHTML = `<div class="info-box">No se encontraron encuentros para la liga <b>${escapeHTML(liga.nombre)}</b> en esta fecha (${fechaSeleccionada}). <br><br>💡 <b>Prueba cambiando la fecha al fin de semana (sábado o domingo).</b></div>`;
+   lista.innerHTML = `<div class="info-box">No se encontraron encuentros para la liga <b>${escapeHTML(liga.nombre)}</b> en esta fecha (${fechaSeleccionada}). <br><br>💡 Cambia la fecha en el selector a un día del fin de semana.</div>`;
    return;
   }
 
@@ -136,10 +136,20 @@ async function cargarPartidos() {
    throw new Error(data.message || `Error (${response.status})`);
   }
 
-  partidosActuales = data.matches || [];
+  // Filtrado tolerante al desfase horario (compara el día local del móvil)
+  const targetDate = new Date(fechaSeleccionada + 'T00:00:00').toDateString();
+  partidosActuales = (data.matches || []).filter(partido => {
+   if (!partido.utcDate) return false;
+   return new Date(partido.utcDate).toDateString() === targetDate;
+  });
+
+  // Si la API filtró de manera flexible y no localizamos por string estricto, tomamos la respuesta del servidor
+  if (partidosActuales.length === 0 && data.matches && data.matches.length > 0) {
+   partidosActuales = data.matches;
+  }
 
   if (partidosActuales.length === 0) {
-   lista.innerHTML = `<div class="info-box">No hay partidos para la liga <b>${escapeHTML(liga.nombre)}</b> el ${fechaSeleccionada}. ¡Prueba con el fin de semana!</div>`;
+   lista.innerHTML = `<div class="info-box">No hay encuentros registrados para la liga <b>${escapeHTML(liga.nombre)}</b> el día ${fechaSeleccionada}.</div>`;
    return;
   }
 
@@ -275,5 +285,4 @@ function forzarVinculacionMobile() {
 }
 
 document.addEventListener('deviceready', forzarVinculacionMobile, false);
-document.addEventListener('DOMContentLoaded', forzarVinculacionMobile, false);
-             
+  
