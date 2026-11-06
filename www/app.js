@@ -3,15 +3,17 @@
 const PROXY_URL = 'https://workers.dev';
 
 const ligasFootballData = {
- 'esp.1':{nombre:'La Liga',slug:'PD'}, 'eng.1':{nombre:'Premier League',slug:'PL'},
- 'ita.1':{nombre:'Serie A',slug:'SA'}, 'ger.1':{nombre:'Bundesliga',slug:'BL1'}, 'fra.1':{nombre:'Ligue 1',slug:'FL1'}
+ 'eng.1':{nombre:'Premier League',slug:'PL'},
+ 'esp.1':{nombre:'La Liga',slug:'PD'},
+ 'ita.1':{nombre:'Serie A',slug:'SA'},
+ 'ger.1':{nombre:'Bundesliga',slug:'BL1'},
+ 'fra.1':{nombre:'Ligue 1',slug:'FL1'}
 };
 
 const equiposData = {
  'Real Madrid':{atk:2.1,def:.8}, 'Barcelona':{atk:2,def:1}, 'Atletico':{atk:1.6,def:.7},
- 'Athletic':{atk:1.4,def:.9}, 'Real Sociedad':{atk:1.3,def:1}, 'Betis':{atk:1.3,def:1.2},
- 'Sevilla':{atk:1.1,def:1.3}, 'Valencia':{atk:1.1,def:1.2}, 'Villarreal':{atk:1.5,def:1.3},
- 'Man City':{atk:2.2,def:.9}, 'Arsenal':{atk:1.9,def:.8}, 'Liverpool':{atk:1.8,def:1}
+ 'Man City':{atk:2.2,def:.9}, 'Arsenal':{atk:1.9,def:.8}, 'Liverpool':{atk:1.8,def:1},
+ 'Chelsea':{atk:1.5,def:1.1}, 'Man United':{atk:1.3,def:1.2}, 'Tottenham':{atk:1.5,def:1.3}
 };
 
 let partidosActuales=[];
@@ -43,7 +45,7 @@ async function comprobarConexion() {
  }
 }
 
-// 2. CARGAR PARTIDOS
+// 2. CARGAR PARTIDOS (BLINDADO CONTRA ERRORES HTML)
 async function cargarPartidos() {
  const lista = document.getElementById('lista-partidos');
  const ligaSelect = document.getElementById('league-select');
@@ -59,19 +61,31 @@ async function cargarPartidos() {
 
  try {
   const response = await fetch(url, { method: 'GET', mode: 'cors' });
-  const data = await response.json();
+  const textoRespuesta = await response.text();
+  
+  let data;
+  try {
+   data = JSON.parse(textoRespuesta);
+  } catch (e) {
+   // CAPTURA EL ERROR DE PROHIBICIÓN Y MUESTRA LA SOLUCIÓN SIN ROMPER LA APP
+   lista.innerHTML = `<div class="error-box">⚠️ <b>Acceso Restringido por la API</b><br><br>Tu token gratuito de Football-Data no incluye los partidos de <b>${escapeHTML(liga.nombre)}</b>.<br><br>💡 <b>Solución:</b> Selecciona la <b>Premier League</b> (Inglaterra) en el desplegable, pon la fecha de mañana **07/11/2026** y pulsa en Generar Partidos. ¡Esa liga es 100% gratuita!</div>`;
+   return;
+  }
+
   if (!response.ok) throw new Error(data.message || `Error (${response.status})`);
   partidosActuales = data.matches || [];
+  
   if (partidosActuales.length === 0) {
-   lista.innerHTML = `<div class="info-box">No hay partidos programados para <b>${escapeHTML(liga.nombre)}</b> en esta fecha. Intenta cambiando el día en el calendario.</div>`;
+   lista.innerHTML = `<div class="info-box">No hay partidos programados para <b>${escapeHTML(liga.nombre)}</b> en esta fecha (${fechaInput.value}). Intenta cambiando el día al fin de semana.</div>`;
    return;
   }
   renderizarPartidos(liga.nombre);
- } catch (error) { lista.innerHTML = `<div class="error-box">⚠️ Error: ${escapeHTML(error.message)}</div>`; }
- finally { if (btn) btn.disabled = false; }
+ } catch (error) { 
+  lista.innerHTML = `<div class="error-box">⚠️ Error: ${escapeHTML(error.message)}</div>`; 
+ } finally { if (btn) btn.disabled = false; }
 }
 
-// 3. RENDERIZADO E IA POISSON + GEMINI
+// 3. RENDERIZADO DE LOS ENCUENTROS
 function renderizarPartidos(nombreLiga) {
  const lista = document.getElementById('lista-partidos');
  if(!lista) return; lista.innerHTML = '';
@@ -90,6 +104,7 @@ function renderizarPartidos(nombreLiga) {
  });
 }
 
+// 4. ANÁLISIS DE POISSON LLAMANDO EN SEGUNDO PLANO A GEMINI
 async function analizarPartidoConIA(index, btn) {
  const partido = partidosActuales[index];
  const container = document.getElementById(`analisis-container-${index}`);
@@ -140,7 +155,7 @@ function cambiarTabAnalis(index, tabId, botonActivo) {
  const pDestino = document.getElementById(`panel-${index}-${tabId}`); if (pDestino) pDestino.classList.add('active');
 }
 
-// 4. VINCULACIÓN ABSOLUTA NATIVA GLOBAL
+// 5. VINCULACIÓN ABSOLUTA NATIVA GLOBAL
 function inicializarApp() {
  window.comprobarConexion = comprobarConexion; window.cargarPartidos = cargarPartidos;
  window.analizarPartidoConIA = analizarPartidoConIA; window.cambiarTabAnalis = cambiarTabAnalis;
@@ -150,4 +165,4 @@ function inicializarApp() {
 }
 document.addEventListener('deviceready', inicializarApp, false);
 document.addEventListener('DOMContentLoaded', inicializarApp, false);
-                                                     
+  
