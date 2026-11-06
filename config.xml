@@ -5,6 +5,7 @@
     <author email="soporte@superfooty.com">SuperFooty</author>
     <content src="index.html" />
     
+    <!-- Permisos de red globales libres de bloqueos -->
     <access origin="*" />
     <allow-navigation href="*" />
     <allow-intent href="http://*/*" />
@@ -15,5 +16,10 @@
     <preference name="AndroidInsecureFileModeEnabled" value="true" />
     <preference name="Orientation" value="portrait" />
 
-    <plugin name="cordova-plugin-advanced-http" spec="3.3.1" />
+    <!-- Configuración obligatoria para compatibilidad con Android 12+ (Cordova 12) -->
+    <platform name="android">
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+            <application android:usesCleartextTraffic="true" />
+        </edit-config>
+    </platform>
 </widget>
