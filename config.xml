@@ -5,18 +5,18 @@
     <author email="soporte@superfooty.com">SuperFooty</author>
     <content src="index.html" />
     
-    <!-- Permisos de red globales libres de bloqueos -->
+    <!-- Permisos totales para cruzar datos con internet -->
     <access origin="*" />
     <allow-navigation href="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     
-    <preference name="Scheme" value="http" />
+    <!-- CORRECCIÓN CLAVE: Forzamos HTTPS interno para evitar bloqueos de red en Android -->
+    <preference name="Scheme" value="https" />
     <preference name="Hostname" value="localhost" />
     <preference name="AndroidInsecureFileModeEnabled" value="true" />
     <preference name="Orientation" value="portrait" />
 
-    <!-- Configuración corregida para compatibilidad con Android 12+ -->
     <platform name="android">
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
