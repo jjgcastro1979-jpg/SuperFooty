@@ -4,10 +4,10 @@
 // SUPERFOOTY PRO - MOTOR PRINCIPAL DEFINITIVO
 // ==========================================
 
-const PROXY_URL = 'https://royal-dream-9429.jjgcastro1979.workers.dev';
+const PROXY_URL = 'https://workers.dev';
 
 const ligasFootballData = {
- 'esp.1':{nombre:'La Liga',slug:'PD'},
+ 'esp.1':{nombre:'La Liga - España',slug:'PD'},
  'eng.1':{nombre:'Premier League',slug:'PL'},
  'ita.1':{nombre:'Serie A',slug:'SA'},
  'ger.1':{nombre:'Bundesliga',slug:'BL1'},
@@ -111,13 +111,12 @@ async function cargarPartidos() {
  }
 
  if (btn) btn.disabled = true;
- lista.innerHTML = '<div class="loader">🔄 Descargando partidos...</div>';
+ lista.innerHTML = '<div class="loader">🔄 Descargando partidos reales...</div>';
 
  const ligaId = ligaSelect.value;
  const fechaSeleccionada = fechaInput.value;
  const liga = ligasFootballData[ligaId];
  
- // Consultamos pasando el parámetro de la fecha seleccionada
  const url = `${PROXY_URL}/v4/competitions/${liga.slug}/matches?dateFrom=${fechaSeleccionada}&dateTo=${fechaSeleccionada}`;
 
  try {
@@ -128,7 +127,7 @@ async function cargarPartidos() {
   try {
    data = JSON.parse(textoRespuesta);
   } catch (e) {
-   lista.innerHTML = `<div class="info-box">No se encontraron encuentros para la liga <b>${escapeHTML(liga.nombre)}</b> en esta fecha (${fechaSeleccionada}). <br><br>💡 Cambia la fecha en el selector a un día del fin de semana.</div>`;
+   lista.innerHTML = `<div class="info-box">No se encontraron encuentros para <b>${escapeHTML(liga.nombre)}</b> el ${fechaSeleccionada}. <br><br>💡 Intenta cambiando el día en el calendario.</div>`;
    return;
   }
 
@@ -136,20 +135,10 @@ async function cargarPartidos() {
    throw new Error(data.message || `Error (${response.status})`);
   }
 
-  // Filtrado tolerante al desfase horario (compara el día local del móvil)
-  const targetDate = new Date(fechaSeleccionada + 'T00:00:00').toDateString();
-  partidosActuales = (data.matches || []).filter(partido => {
-   if (!partido.utcDate) return false;
-   return new Date(partido.utcDate).toDateString() === targetDate;
-  });
-
-  // Si la API filtró de manera flexible y no localizamos por string estricto, tomamos la respuesta del servidor
-  if (partidosActuales.length === 0 && data.matches && data.matches.length > 0) {
-   partidosActuales = data.matches;
-  }
+  partidosActuales = data.matches || [];
 
   if (partidosActuales.length === 0) {
-   lista.innerHTML = `<div class="info-box">No hay encuentros registrados para la liga <b>${escapeHTML(liga.nombre)}</b> el día ${fechaSeleccionada}.</div>`;
+   lista.innerHTML = `<div class="info-box">No hay partidos registrados para la liga <b>${escapeHTML(liga.nombre)}</b> el día ${fechaSeleccionada}.</div>`;
    return;
   }
 
@@ -162,7 +151,7 @@ async function cargarPartidos() {
 }
 
 // ==========================================
-// 3. RENDERIZAR E IA POISSON
+// 3. RENDERIZAR E IA POISSON + GEMINI LIVE
 // ==========================================
 function renderizarPartidos(nombreLiga) {
  const lista = document.getElementById('lista-partidos');
@@ -196,7 +185,7 @@ function renderizarPartidos(nombreLiga) {
  });
 }
 
-function analizarPartidoConIA(index, btn) {
+async function analizarPartidoConIA(index, btn) {
  const partido = partidosActuales[index];
  const container = document.getElementById(`analisis-container-${index}`);
  if (!partido || !container) return;
@@ -236,7 +225,7 @@ function analizarPartidoConIA(index, btn) {
   <div class="tabs">
    <button class="tab active" onclick="cambiarTabAnalis(${index}, 'mercados', this)">📈 Mercados</button>
    <button class="tab" onclick="cambiarTabAnalis(${index}, 'goles', this)">⚽ Goles</button>
-   <button class="tab" onclick="cambiarTabAnalis(${index}, 'ia', this)">🧠 IA</button>
+   <button class="tab" onclick="cambiarTabAnalis(${index}, 'ia', this)">🧠 IA Gemini</button>
   </div>
   <div id="panel-${index}-mercados" class="analysis-panel active">
    <div class="chart-box">
@@ -253,12 +242,34 @@ function analizarPartidoConIA(index, btn) {
   </div>
   <div id="panel-${index}-ia" class="analysis-panel">
    <div class="recommendation">
-    <h3>🎯 PRONÓSTICO IA</h3>
-    <div class="pick">${escapeHTML(pickRecomendado)}</div>
+    <h3>🧠 ANÁLISIS EXPERTO GEMINI AI</h3>
+    <div id="gemini-texto-${index}" class="small-note" style="color:#f8fafc; text-align:left; font-size:12px; line-height:1.4; margin-top:10px;">
+     ⏳ Consultando con Gemini Pro v1.5 para generar tácticas avanzadas...
+    </div>
    </div>
   </div>
  `;
  if(btn) btn.style.display = "none";
+
+ try {
+  const indicacionesIA = `Actúa como un experto analista deportivo de fútbol. Analiza el partido entre ${partido.homeTeam.name} y ${partido.awayTeam.name}. Las probabilidades matemáticas de Poisson son: Victoria Local ${pctLocal}%, Empate ${pctEmpate}%, Victoria Visitante ${pctVisitante}%. Probabilidad de más de 2.5 goles: ${pctOver25}%. Genera un pronóstico breve de 2 líneas con mercados lógicos recomendados para combinar (Goles, córners o tarjetas).`;
+  
+  const iaResponse = await fetch(`${PROXY_URL}/v1/gemini`, {
+   method: 'POST',
+   body: JSON.stringify({ prompt: indicacionesIA })
+  });
+  
+  const iaData = await iaResponse.json();
+  const cuadroTexto = document.getElementById(`gemini-texto-${index}`);
+  if (cuadroTexto && iaData.analisis) {
+   cuadroTexto.textContent = iaData.analisis;
+  }
+ } catch (err) {
+  const cuadroTexto = document.getElementById(`gemini-texto-${index}`);
+  if (cuadroTexto) {
+   cuadroTexto.innerHTML = `🎯 <b>Recomendación básica:</b> ${escapeHTML(pickRecomendado)} (Modo offline probabilístico)`;
+  }
+ }
 }
 
 function renderBarraProgreso(e, v, c) {
@@ -269,20 +280,3 @@ function cambiarTabAnalis(index, tabId, botonActivo) {
  const contenedor = botonActivo.parentElement;
  contenedor.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
  botonActivo.classList.add('active');
- contenedor.parentElement.querySelectorAll('.analysis-panel').forEach(p => p.classList.remove('active'));
- const panelDestino = document.getElementById(`panel-${index}-${tabId}`);
- if (panelDestino) panelDestino.classList.add('active');
-}
-
-// ==========================================
-// 4. VINCULACIÓN MÓVIL GLOBAL
-// ==========================================
-function forzarVinculacionMobile() {
- window.comprobarConexion = comprobarConexion;
- window.cargarPartidos = cargarPartidos;
- window.analizarPartidoConIA = analizarPartidoConIA;
- window.cambiarTabAnalis = cambiarTabAnalis;
-}
-
-document.addEventListener('deviceready', forzarVinculacionMobile, false);
-  
