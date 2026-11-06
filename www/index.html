@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1e3a8a">
 <title>SuperFooty Pro</title>
-
 <style>
 :root {
  --primary:#1e3a8a;
@@ -28,7 +27,7 @@ h3.section-title{font-size:15px;color:var(--primary);margin:20px 0 10px;border-b
 .league-badge{background:#e0e7ff;color:var(--primary);padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold}
 .match-time{font-size:12px;color:var(--gray)}
 .teams-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:15px 0}
-.team-name Img,.team-name{width:43%;font-size:14px;font-weight:bold;overflow-wrap:anywhere}
+.team-name{width:43%;font-size:14px;font-weight:bold;overflow-wrap:anywhere}
 .team-name.right{text-align:right}
 .vs-badge{background:var(--dark);color:white;padding:7px 10px;border-radius:7px;font-size:12px}
 .btn{width:100%;padding:13px;background:var(--accent);color:white;border:0;border-radius:10px;font-size:14px;font-weight:bold;margin-top:8px;cursor:pointer}
@@ -61,7 +60,6 @@ nav a.active{color:var(--primary)}
 .small-note{font-size:11px;color:var(--gray);line-height:1.5}
 </style>
 </head>
-
 <body>
 <header>
  <div class="logo">⚽ SUPER<span>FOOTY</span> PRO</div>
@@ -87,7 +85,6 @@ nav a.active{color:var(--primary)}
 
 <main id="partidos" class="page">
  <h2>Partidos y análisis</h2>
-
  <select id="league-select">
   <option value="esp.1">La Liga - España</option>
   <option value="eng.1">Premier League</option>
@@ -95,10 +92,8 @@ nav a.active{color:var(--primary)}
   <option value="ger.1">Bundesliga</option>
   <option value="fra.1">Ligue 1</option>
  </select>
-
  <input type="date" id="date-select">
  <button class="btn" id="btn-cargar">🔄 GENERAR PARTIDOS</button>
-
  <div id="lista-partidos">
   <div class="loader">Selecciona una fecha y genera los partidos.</div>
  </div>
@@ -108,7 +103,7 @@ nav a.active{color:var(--primary)}
  <h2>Equipos</h2>
  <div class="panel">
   <h3>📊 Estadísticas de equipos</h3>
-  <p class="small-note">La información de córners y tarjetas se mostrará cuando esté disponible una fuente estadística que la proporcione.</p>
+  <p class="small-note">La información de córners y tarjetas se mostrará cuando esté disponible una fuente estadística que la preocione.</p>
  </div>
 </main>
 
@@ -125,24 +120,12 @@ function showPage(id){
  document.getElementById(id).classList.add('active');
  document.getElementById('nav-'+id).classList.add('active');
 }
-
 document.addEventListener('DOMContentLoaded',()=>{
  const input=document.getElementById('date-select');
  const hoy=new Date();
  input.value=new Date(hoy.getTime()-hoy.getTimezoneOffset()*60000).toISOString().slice(0,10);
 });
-
-// Vinculación explícita para evitar fallos de ejecución rápidos en entornos móviles WebView
-document.addEventListener('deviceready', () => {
-  const btnConexion = document.getElementById('btn-comprobar-conexion');
-  const btnCargar = document.getElementById('btn-cargar');
-  
-  if (btnConexion) btnConexion.onclick = comprobarConexion;
-  if (btnCargar) btnCargar.onclick = cargarPartidos;
-}, false);
 </script>
-
-<!-- Carga del puente nativo inyectado de Cordova y script principal -->
 <script src="cordova.js"></script>
 <script src="app.js"></script>
 </body>
