@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.superfooty.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.superfooty.app" version="1.0.0" xmlns="http://w3.org" xmlns:cdv="http://apache.org" xmlns:android="http://android.com">
     <name>SuperFooty</name>
     <description>Análisis de fútbol real.</description>
     <author email="soporte@superfooty.com">SuperFooty</author>
@@ -16,7 +16,7 @@
     <preference name="AndroidInsecureFileModeEnabled" value="true" />
     <preference name="Orientation" value="portrait" />
 
-    <!-- Configuración obligatoria para compatibilidad con Android 12+ (Cordova 12) -->
+    <!-- Configuración corregida para compatibilidad con Android 12+ -->
     <platform name="android">
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
             <application android:usesCleartextTraffic="true" />
