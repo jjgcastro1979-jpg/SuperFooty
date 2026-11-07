@@ -94,7 +94,8 @@ nav a.active{color:var(--primary)}
  </select>
 
  <input type="date" id="date-select">
- <button class="btn" id="btn-cargar">🔄 GENERAR PARTIDOS</button>
+ <!-- CORRECCIÓN AQUÍ: Agregada la directiva onclick para lanzar la función al tocar en el móvil -->
+ <button class="btn" id="btn-cargar" onclick="cargarPartidos()">🔄 GENERAR PARTIDOS</button>
 
  <div id="lista-partidos">
   <div class="loader">Selecciona una fecha y genera los partidos.</div>
