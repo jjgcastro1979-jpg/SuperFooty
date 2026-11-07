@@ -1,13 +1,12 @@
 "use strict";
 
-// CONFIGURACIÓN: Introduce tu clave de Gemini para el análisis en tiempo real
-const GEMINI_KEY = "Sustituye_Esto_Por_Tu_Clave_De_Gemini_Aqui";
+// CONFIGURACIÓN: Reemplaza obligatoriamente este texto por tu API KEY real de Google Gemini
+const GEMINI_KEY = "AQ.Ab8RN6IzisBE3NouJgXnFlwVWYe0MSM9MDSJMAx728kzTw4pjg";
 
 let partidosActuales = [];
 const $ = (id) => document.getElementById(id);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "'" }[c]));
 
-// Lista de equipos reales de las 5 grandes ligas europeas con sus fuerzas
 const baseLigas = {
  'esp.1': { nombre: 'La Liga - España', equipos: ['Real Madrid', 'Barcelona', 'Atletico', 'Athletic', 'Sevilla', 'Valencia', 'Villarreal', 'Real Sociedad', 'Betis', 'Osasuna'] },
  'eng.1': { nombre: 'Premier League', equipos: ['Man City', 'Arsenal', 'Liverpool', 'Chelsea', 'Man United', 'Tottenham', 'Aston Villa', 'Newcastle', 'West Ham', 'Everton'] },
@@ -17,58 +16,56 @@ const baseLigas = {
 };
 
 const fuerzasEquipos = {
- 'Real Madrid':{atk:2.2,def:.8}, 'Barcelona':{atk:2.1,def:.9}, 'Man City':{atk:2.3,def:.8},
- 'Bayern':{atk:2.4,def:.9}, 'PSG':{atk:2.2,def:.9}, 'Inter':{atk:2.0,def:.7}
+ 'Real Madrid':{atk:2.3,def:.7,crn:6.5,tar:2.1}, 'Barcelona':{atk:2.2,def:.8,crn:5.8,tar:2.3}, 
+ 'Atletico':{atk:1.7,def:.6,crn:5.2,tar:2.8}, 'Athletic':{atk:1.5,def:.9,crn:5.5,tar:2.4}, 
+ 'Sevilla':{atk:1.2,def:1.2,crn:4.8,tar:3.1}, 'Valencia':{atk:1.1,def:1.3,crn:4.5,tar:2.9}, 
+ 'Villarreal':{atk:1.6,def:1.2,crn:5.0,tar:2.6}, 'Real Sociedad':{atk:1.4,def:1.0,crn:5.1,tar:2.2}, 
+ 'Betis':{atk:1.4,def:1.1,crn:4.9,tar:2.4}, 'Osasuna':{atk:1.2,def:1.1,crn:4.6,tar:2.7},
+ 'Man City':{atk:2.4,def:.8,crn:7.2,tar:1.6}, 'Arsenal':{atk:2.0,def:.7,crn:6.1,tar:1.9}, 
+ 'Liverpool':{atk:2.1,def:.9,crn:6.8,tar:1.8}, 'Chelsea':{atk:1.7,def:1.2,crn:5.4,tar:2.7}, 
+ 'Man United':{atk:1.4,def:1.3,crn:5.1,tar:2.5}, 'Tottenham':{atk:1.6,def:1.3,crn:5.9,tar:2.4},
+ 'Inter':{atk:2.1,def:.7,crn:5.7,tar:1.9}, 'Juventus':{atk:1.6,def:.6,crn:5.0,tar:2.2}, 
+ 'Milan':{atk:1.8,def:1.1,crn:5.3,tar:2.4}, 'Bayern':{atk:2.5,def:.9,crn:7.5,tar:1.5}, 
+ 'PSG':{atk:2.3,def:.8,crn:6.2,tar:1.8}
 };
 
 async function comprobarConexion() {
   let b = $("estado-conexion"); if (!b) return;
   let gem = GEMINI_KEY.includes("_") ? "❌ Falta clave" : "🟢 Conectada y Lista";
-  b.className = "info-box"; b.style.background = "#dcfce7"; b.style.borderColor = "#bbf7d0"; b.style.color = "#166534";
+  b.className = "info-box"; b.style.background = "#dcfce7"; b.style.borderColor = "#bbf7d0"; box.style.color = "#166534";
   b.innerHTML = `<b>Motor Autónomo Local:</b> 🟢 Activo<br><b>Google Gemini IA:</b> ${gem}<br><br>¡El sistema generador está listo! No dependes de proxies externos.`;
 }
 
-// GENERADOR AUTOMÁTICO DE PARTIDOS BASADO EN LA FECHA
 async function cargarPartidos() {
   let list = $("lista-partidos"), ligaSelect = $("league-select"), fechaInput = $("date-select");
   if (!list || !ligaSelect || !fechaInput) return;
   
-  let ligaId = ligaSelect.value;
-  let fecha = fechaInput.value; // YYYY-MM-DD
+  let ligaId = ligaSelect.value; let fecha = fechaInput.value;
   if (!fecha) { list.innerHTML = '<div class="error-box">Selecciona una fecha.</div>'; return; }
-
-  list.innerHTML = '<div class="loader">🧠 Generando emparejamientos oficiales por IA...</div>';
+  list.innerHTML = '<div class="loader">🧠 Creando partidos de la jornada...</div>';
   
-  let datosLiga = baseLigas[ligaId];
-  let eq = [...datosLiga.equipos];
-  
-  // Usamos el día de la fecha como semilla matemática para emparejar equipos de forma coherente
+  let datosLiga = baseLigas[ligaId]; let eq = [...datosLiga.equipos];
   let numDia = new Date(fecha + 'T00:00:00').getDate() || 7;
   
   partidosActuales = [];
-  // Generamos 3 partidos por jornada dinámicamente usando rotación matemática
   for (let i = 0; i < 3; i++) {
     let localIdx = (numDia + i * 2) % eq.length;
     let visitaIdx = (numDia + i * 2 + 1) % eq.length;
     if (localIdx === visitaIdx) visitaIdx = (visitaIdx + 1) % eq.length;
     
     partidosActuales.push({
-      id_partido: i,
-      league_name: datosLiga.nombre,
-      homeTeam: { name: eq[localIdx] },
-      awayTeam: { name: eq[visitaIdx] },
+      id_partido: i, league_name: datosLiga.nombre,
+      homeTeam: { name: eq[localIdx] }, awayTeam: { name: eq[visitaIdx] },
       hora: `${16 + i * 2}:30`
     });
   }
-
-  // Pequeño retardo de milisegundos para simular sincronización real
-  setTimeout(() => { renderizarPartidos(datosLiga.nombre); }, 400);
+  setTimeout(() => { renderizarPartidos(datosLiga.nombre); }, 300);
 }
 
 function renderizarPartidos(nombreLiga) {
   let list = $("lista-partidos"); if (!list) return;
   list.innerHTML = partidosActuales.map((f, i) => {
-    return `<div class="match-card"><div class="match-header"><span class="league-badge">${esc(nombreLiga)}</span><span class="match-time">🕒 Hora local: ${esc(f.hora)}</span></div><div class="teams-row"><div class="team-name">${esc(f.homeTeam.name)}</div><div class="vs-badge">VS</div><div class="team-name right">${esc(f.awayTeam.name)}</div></div><button class="btn" onclick="analizarPartido(${i})">🧠 ANALIZAR CON GEMINI IA</button></div>`;
+    return `<div class="match-card"><div class="match-header"><span class="league-badge">${esc(nombreLiga)}</span><span class="match-time">🕒 Hora: ${esc(f.hora)}</span></div><div class="teams-row"><div class="team-name">${esc(f.homeTeam.name)}</div><div class="vs-badge">VS</div><div class="team-name right">${esc(f.awayTeam.name)}</div></div><button class="btn" onclick="analizarPartido(${i})">🧠 ANALIZAR CON GEMINI IA</button></div>`;
   }).join("");
 }
 
@@ -78,76 +75,102 @@ function poisson(k, l) {
 }
 
 function calcularModelo(local, visita) {
-  let fL = fuerzasEquipos[local] || {atk:1.3, def:1.2};
-  let fV = fuerzasEquipos[visita] || {atk:1.2, def:1.2};
-  let expL = fL.atk * fV.def, expV = fV.atk * fL.def;
+  let fL = fuerzasEquipos[local] || {atk:1.3, def:1.2, crn:4.5, tar:2.5};
+  let fV = fuerzasEquipos[visita] || {atk:1.2, def:1.2, crn:4.5, tar:2.5};
   
-  let total = 0, w = 0, dr = 0, l = 0, o25 = 0;
+  let expL = fL.atk * fV.def, expV = fV.atk * fL.def;
+  let total = 0, w = 0, dr = 0, l = 0, o15 = 0, o25 = 0, btts = 0;
+  
   for (let i = 0; i <= 5; i++) {
     for (let j = 0; j <= 5; j++) {
       let p = poisson(i, expL) * poisson(j, expV); total += p;
       if (i > j) w += p; else if (i === j) dr += p; else l += p;
-      if (i + j >= 3) o25 += p;
+      if (i + j >= 2) o15 += p; if (i + j >= 3) o25 += p; if (i > 0 && j > 0) btts += p;
     }
   }
-  return { home: (w/total)*100, draw: (dr/total)*100, away: (l/total)*100, o25: (o25/total)*100 };
+  return {
+    home: (w/total)*100, draw: (dr/total)*100, away: (l/total)*100, 
+    o15: (o15/total)*100, o25: (o25/total)*100, btts: (btts/total)*100,
+    corners: (fL.crn + fV.crn), tarjetas: (fL.tar + fV.tar)
+  };
 }
 
 const bar = (label, v) => `<div class="chart-row"><div class="chart-label"><span>${esc(label)}</span><span>${v.toFixed(1)}%</span></div><div class="chart-track"><div class="chart-fill" style="width:${v}%;background:#10b981"></div></div></div>`;
 
-// 3. ANÁLISIS EN TIEMPO REAL CON LA API DIRECTA DE GEMINI
 async function analizarPartido(i) {
   let f = partidosActuales[i]; if (!f || !$("lista-partidos")) return;
-  $("lista-partidos").innerHTML = '<div class="loader">🧠 Consultando variables con la red de Gemini IA...</div>';
+  $("lista-partidos").innerHTML = '<div class="loader">🧠 Consultando con la red neuronal de Gemini...</div>';
   
   let m = calcularModelo(f.homeTeam.name, f.awayTeam.name);
   let ia = "Cargando análisis...";
   
-  let prompt = `Actúa como un experto analista deportivo. Analiza de forma compacta en 2 líneas el partido ${f.homeTeam.name} vs ${f.awayTeam.name} de la liga ${f.league_name}. Datos estadísticos: Victoria Local ${m.home.toFixed(1)}%, Empate ${m.draw.toFixed(1)}%, Victoria Visitante ${m.away.toFixed(1)}%. Recomienda mercados lógicos.`;
+  // RENDERIZADO COMPLETO DE LOS NUEVOS PANELES (MERCADOS, GOLES, CÓRNERS, TARJETAS)
+  $("lista-partidos").innerHTML = `
+    <button class="btn btn-secondary" onclick="cargarPartidos()">← VOLVER A JORNADA</button>
+    <div class="match-card">
+      <div class="teams-row">
+        <div class="team-name">${esc(f.homeTeam.name)}</div>
+        <div class="vs-badge">VS</div>
+        <div class="team-name right">${escapeHTML = esc(f.awayTeam.name)}</div>
+      </div>
+      <div class="tabs" style="display:flex; overflow-x:auto; gap:5px; margin:10px 0;">
+        <button id="tab-general" class="tab active" onclick="tab('general')">📈 Probabilidades</button>
+        <button id="tab-goles" class="tab" onclick="tab('goles')">⚽ Goles</button>
+        <button id="tab-variables" class="tab" onclick="tab('variables')">🚩 Córners/Tarjetas</button>
+        <button id="tab-ia" class="tab" onclick="tab('ia')">🧠 Veredicto IA</button>
+      </div>
+      
+      <div id="panel-general" class="analysis-panel active">
+        <div class="chart-box">
+          <h3 style="font-size:13px; margin-bottom:8px; color:#1e3a8a;">Ganador del Partido (1X2)</h3>
+          ${bar("Victoria Local", m.home)} ${bar("Empate", m.draw)} ${bar("Victoria Visitante", m.away)}
+        </div>
+      </div>
+
+      <div id="panel-goles" class="analysis-panel" style="display:none;">
+        <div class="chart-box">
+          <h3 style="font-size:13px; margin-bottom:8px; color:#1e3a8a;">Líneas de Goles</h3>
+          ${bar("Más de 1.5 Goles", m.o15)} ${bar("Más de 2.5 Goles", m.o25)} ${bar("Ambos Equipos Anotan", m.btts)}
+        </div>
+      </div>
+
+      <div id="panel-variables" class="analysis-panel" style="display:none;">
+        <div class="chart-box">
+          <h3 style="font-size:13px; margin-bottom:8px; color:#1e3a8a;">Estadísticas Secundarias</h3>
+          <div class="info-box" style="margin-bottom:8px;">🚩 <b>Córners globales estimados:</b> ${m.corners.toFixed(1)}</div>
+          <div class="info-box" style="background:#fffbeb; border-color:#fef3c7; color:#b45309;">🟨 <b>Tarjetas promedio estimadas:</b> ${m.tarjetas.toFixed(1)}</div>
+        </div>
+      </div>
+
+      <div id="panel-ia" class="analysis-panel" style="display:none;">
+        <div class="recommendation">
+          <h3>🤖 PRONÓSTICO GEMINI IA</h3>
+          <p id="gemini-texto-${i}" style="text-align:left; font-size:13px; id:gemini-t; line-height:1.4; color:#f8fafc; margin-top:10px;">
+            ⏳ Procesando predicción en directo...
+          </p>
+        </div>
+      </div>
+    </div>`;
+
+  if (GEMINI_KEY.includes("_")) {
+    let txt = document.getElementById(`gemini-texto-${i}`);
+    if(txt) txt.innerHTML = "❌ <b>Clave de Gemini ausente:</b> Introduce tu API Key real en la línea 4 de tu archivo app.js en GitHub para activar los veredictos expertos automatizados.";
+    return;
+  }
+
+  let prompt = `Actúa como un experto analista deportivo. Analiza de forma compacta en 3 líneas el partido de fútbol ${f.homeTeam.name} vs ${f.awayTeam.name}. Datos estadísticos calculados: Victoria Local ${m.home.toFixed(1)}%, Empate ${m.draw.toFixed(1)}%, Victoria Visitante ${m.away.toFixed(1)}%, Córners esperados: ${m.corners.toFixed(1)}, Tarjetas estimadas: ${m.tarjetas.toFixed(1)}. Recomienda un mercado de valor o una combinación lógica para apostar.`;
   let geminiUrl = `https://googleapis.com{GEMINI_KEY}`;
 
   try {
     let res = await fetch(geminiUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
     let geminiData = await res.json();
-    ia = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "Análisis táctico completado por el modelo generativo.";
-  } catch (e) { ia = "Activa tu clave real de Gemini en la línea 4 de tu app.js para recibir informes de IA."; }
-
-  $("lista-partidos").innerHTML = `
-    <button class="btn btn-secondary" onclick="cargarPartidos()">← VOLVER A JORNADA</button>
-    <div class="match-card">
-      <div class="tabs">
-        <button id="tab-general" class="tab active" onclick="tab('general')">📊 Estadísticas</button>
-        <button id="tab-ia" class="tab" onclick="tab('ia')">🧠 Veredicto IA</button>
-      </div>
-      <div id="panel-general" class="analysis-panel active">
-        <div class="chart-box">
-          <h3 style="font-size:13px; margin-bottom:10px; color:#1e3a8a;">Porcentajes Probabilísticos (Poisson)</h3>
-          ${bar("Gana Local", m.home)} ${bar("Empate", m.draw)} ${bar("Gana Visitante", m.away)} ${bar("Más de 2.5 Goles", m.o25)}
-        </div>
-      </div>
-      <div id="panel-ia" class="analysis-panel">
-        <div class="recommendation">
-          <h3>🤖 ANÁLISIS EN DIRECTO</h3>
-          <p style="text-align:left; font-size:13px; line-height:1.4; color:#f8fafc; margin-top:10px;">
-            ${esc(ia).replace(/\n/g, '<br>')}
-          </p>
-        </div>
-      </div>
-    </div>`;
+    let textoFinal = geminiData?.candidates?.?.content?.parts?.?.text || "Análisis táctico completado por el modelo generativo.";
+    let txt = document.getElementById(`gemini-texto-${i}`);
+    if (txt) txt.innerHTML = esc(textoFinal).replace(/\n/g, '<br>');
+  } catch (e) {
+    let txt = document.getElementById(`gemini-texto-${i}`);
+    if (txt) txt.textContent = "Error al conectar con los servidores de Google IA.";
+  }
 }
 
-function tab(n) {
-  document.querySelectorAll(".analysis-panel").forEach((x) => x.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
-  $("panel-" + n)?.classList.add("active"); $("tab-" + n)?.classList.add("active");
-}
-
-function inicializarApp() {
-  window.comprobarConexion = comprobarConexion; window.cargarPartidos = cargarPartidos;
-  window.analizarPartido = analizarPartido; window.tab = tab;
-  const b1 = $("btn-comprobar-conexion"), b2 = $("btn-cargar");
-  if (b1) b1.onclick = comprobarConexion; if (b2) b2.onclick = cargarPartidos;
-}
-
-document.addEventListener('deviceready', inicializarApp, false);
-document.addEventListener('DOMContentLoaded', inicializarApp, false);
+     
