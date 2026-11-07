@@ -1,25 +1,29 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.superfooty.app" version="1.0.0" xmlns="http://w3.org" xmlns:cdv="http://apache.org" xmlns:android="http://android.com">
-    <name>SuperFooty</name>
-    <description>Análisis de fútbol real.</description>
-    <author email="soporte@superfooty.com">SuperFooty</author>
+<widget id="com.superfooty.pro"
+        version="1.0.0"
+        xmlns="http://www.w3.org/ns/widgets"
+        xmlns:cdv="http://cordova.apache.org/ns/1.0">
+
+    <name>SuperFooty Pro</name>
+    <description>Estadísticas y análisis de fútbol con inteligencia artificial.</description>
+    <author email="soporte@superfooty.app" href="https://github.com/">
+        SuperFooty Pro
+    </author>
+
     <content src="index.html" />
-    
-    <!-- Permisos totales para cruzar datos con internet -->
+
     <access origin="*" />
     <allow-navigation href="*" />
-    <allow-intent href="http://*/*" />
-    <allow-intent href="https://*/*" />
-    
-    <!-- CORRECCIÓN CLAVE: Forzamos HTTPS interno para evitar bloqueos de red en Android -->
-    <preference name="Scheme" value="https" />
-    <preference name="Hostname" value="localhost" />
-    <preference name="AndroidInsecureFileModeEnabled" value="true" />
+
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="AndroidXEnabled" value="true" />
     <preference name="Orientation" value="portrait" />
+    <preference name="Fullscreen" value="false" />
+    <preference name="SplashScreenDelay" value="0" />
 
     <platform name="android">
-        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
-            <application android:usesCleartextTraffic="true" />
-        </edit-config>
+        <allow-intent href="market:*" />
+        <preference name="AndroidLaunchMode" value="singleTop" />
     </platform>
+
 </widget>
