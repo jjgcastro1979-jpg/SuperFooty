@@ -15,25 +15,28 @@ const fuerzasEquipos = {
  'Real Madrid':{atk:2.3,def:.7,crn:6.5,tar:2.1}, 'Barcelona':{atk:2.2,def:.8,crn:5.8,tar:2.3}, 'Atletico':{atk:1.7,def:.6,crn:5.2,tar:2.8}, 'Man City':{atk:2.4,def:.8,crn:7.2,tar:1.6}, 'Arsenal':{atk:2.0,def:.7,crn:6.1,tar:1.9}, 'Liverpool':{atk:2.1,def:.9,crn:6.8,tar:1.8}, 'Inter':{atk:2.1,def:.7,crn:5.7,tar:1.9}, 'Juventus':{atk:1.6,def:.6,crn:5.0,tar:2.2}, 'Bayern':{atk:2.5,def:.9,crn:7.5,tar:1.5}, 'PSG':{atk:2.3,def:.8,crn:6.2,tar:1.8}
 };
 
-// Función para guardar la clave en la memoria del teléfono móvil
+// Función para salvar la clave de forma persistente en el dispositivo móvil
 function guardarClaveManual() {
-  const clave = $("api-key-input") ? $("api-key-input").value.trim() : "";
+  const inputElement = $("api-key-input");
+  const clave = inputElement ? inputElement.value.trim() : "";
   if (!clave) { alert("Por favor, introduce una clave válida."); return; }
-  localStorage.setItem("gemini_key_user", clave);
+  
+  window.localStorage.setItem("gemini_key_user", clave);
   alert("¡Clave IA guardada de forma segura en tu teléfono móvil!");
   comprobarConexion();
 }
 
 async function comprobarConexion() {
-  let b = $("estado-conexion"); if (!b) return;
-  const keyGuardada = localStorage.getItem("gemini_key_user");
+  let box = $("estado-conexion"); if (!box) return;
+  const keyGuardada = window.localStorage.getItem("gemini_key_user") || "";
   
-  let gem = (!keyGuardada || keyGuardada.length < 5) ? "❌ Falta introducir clave en el cuadro de arriba" : "🟢 Conectada y Lista";
-  b.className = "info-box"; b.style.background = "#dcfce7"; b.style.borderColor = "#bbf7d0"; b.style.color = "#166534";
-  b.innerHTML = `<b>Motor Autónomo Local:</b> 🟢 Activo<br><b>Google Gemini IA:</b> ${gem}`;
-  
-  if(keyGuardada && $("api-key-input")) {
-    $("api-key-input").value = keyGuardada;
+  if (keyGuardada && keyGuardada.length > 5) {
+    box.className = "info-box"; box.style.background = "#dcfce7"; box.style.borderColor = "#bbf7d0"; box.style.color = "#166534";
+    box.innerHTML = `<b>Motor Autónomo Local:</b> 🟢 Activo<br><b>Google Gemini IA:</b> 🟢 Conectada y Lista`;
+    if ($("api-key-input")) $("api-key-input").value = keyGuardada;
+  } else {
+    box.className = "error-box"; box.style.background = "#fee2e2"; box.style.borderColor = "#fca5a5"; box.style.color = "#991b1b";
+    box.innerHTML = `<b>Motor Autónomo Local:</b> 🟢 Activo<br><b>Google Gemini IA:</b> ❌ Falta introducir clave en el cuadro de arriba`;
   }
 }
 
@@ -92,13 +95,12 @@ async function analizarPartido(i) {
       <div id="panel-general" class="analysis-panel class active"><div class="chart-box"><h3 style="font-size:13px; margin-bottom:8px; color:#1e3a8a;">Ganador del Partido (1X2)</h3>${bar("Victoria Local", m.home)} ${bar("Empate", m.draw)} ${bar("Victoria Visitante", m.away)}</div></div>
       <div id="panel-goles" class="analysis-panel" style="display:none;"><div class="chart-box"><h3 style="font-size:13px; margin-bottom:8px; color:#1e3a8a;">Líneas de Goles</h3>${bar("Más de 1.5 Goles", m.o15)} ${bar("Más de 2.5 Goles", m.o25)} ${bar("Ambos Equipos Anotan", m.btts)}</div></div>
       <div id="panel-variables" class="analysis-panel" style="display:none;"><div class="chart-box"><h3 style="font-size:13px; margin-bottom:8px; color:#1e3a8a;">Estadísticas Secundarias</h3><div class="info-box" style="margin-bottom:8px;">🚩 <b>Córners globales estimados:</b> ${m.corners.toFixed(1)}</div><div class="info-box" style="background:#fffbeb; border-color:#fef3c7; color:#b45309;">🟨 <b>Tarjetas promedio estimadas:</b> ${m.tarjetas.toFixed(1)}</div></div></div>
-      <div id="panel-ia" class="analysis-panel" style="display:none;"><div class="recommendation"><h3>🤖 PRONÓSTICO GEMINI IA</h3><p id="gemini-texto-${i}" style="text-align:left; font-size:13px; line-height:1.4; color:#f8fafc; margin-top:10px;">⏳ Procesando predicción en directo...</p></div></div>
+      <div id="panel-ia" class="analysis-panel" style="display:none;"><div class="recommendation"><h3>🧠 PRONÓSTICO GEMINI IA</h3><p id="gemini-texto-${i}" style="text-align:left; font-size:13px; line-height:1.4; color:#f8fafc; margin-top:10px;">⏳ Procesando predicción en directo...</p></div></div>
     </div>`;
 
   let prompt = `Actúa como un experto analista deportivo. Analiza de forma compacta en 3 líneas el partido de fútbol ${f.homeTeam.name} vs ${f.awayTeam.name}. Datos estadísticos: Victoria Local ${m.home.toFixed(1)}%, Empate ${m.draw.toFixed(1)}%, Victoria Visitante ${m.away.toFixed(1)}%, Córners esperados: ${m.corners.toFixed(1)}, Tarjetas estimadas: ${m.tarjetas.toFixed(1)}. Recomienda un mercado de valor o una combinación lógica para apostar.`;
   
-  // Leemos la clave directamente de la memoria privada del teléfono del usuario
-  const keyDinamica = localStorage.getItem("gemini_key_user") || "";
+  const keyDinamica = window.localStorage.getItem("gemini_key_user") || "";
   let geminiUrl = `https://googleapis.com{keyDinamica}`;
 
   try {
@@ -108,10 +110,10 @@ async function analizarPartido(i) {
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
     });
     let geminiData = await res.json();
-    let textoFinal = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "Análisis táctico completado con éxito.";
+    let textoFinal = geminiData?.candidates?.[0]?.content?.parts[0]?.text || geminiData?.candidates?.content?.parts?.text || "Análisis táctico completado con éxito.";
     let txt = document.getElementById(`gemini-texto-${i}`); if (txt) txt.innerHTML = esc(textoFinal).replace(/\n/g, '<br>');
   } catch (e) {
-    let txt = document.getElementById(`gemini-texto-${i}`); if (txt) txt.textContent = "Error de sincronización. Asegúrate de haber guardado tu clave de Google AI Studio en la pantalla de inicio.";
+    let txt = document.getElementById(`gemini-texto-${i}`); if (txt) txt.textContent = "Error al decodificar el informe. Comprueba tu conexión de datos móviles.";
   }
 }
 
@@ -124,7 +126,4 @@ function tab(n) {
 
 function inicializarApp() {
   window.comprobarConexion = comprobarConexion; window.cargarPartidos = cargarPartidos; window.analizarPartido = analizarPartido; window.tab = tab; window.guardarClaveManual = guardarClaveManual;
-  const b1 = $("btn-comprobar-conexion"), b2 = $("btn-cargar");
-  if (b1) b1.onclick = comprobarConexion; if (b2) b2.onclick = cargarPartidos;
-  comprobarConexion();
-   }
+                                                                                                                                                                                       
