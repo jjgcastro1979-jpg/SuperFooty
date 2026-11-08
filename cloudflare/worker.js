@@ -1,4 +1,3 @@
-
 // ==========================================
 // SUPERFOOTY PRO
 // CLOUDFLARE WORKER
