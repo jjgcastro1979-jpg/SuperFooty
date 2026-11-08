@@ -1,5 +1,4 @@
-
-name: Construir APK SuperFooty Pro
+: Construir APK SuperFooty Pro
 
 on:
   workflow_dispatch:
