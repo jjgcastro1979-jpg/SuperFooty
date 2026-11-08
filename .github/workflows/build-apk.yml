@@ -33,30 +33,22 @@ jobs:
       - name: Instalar Cordova
         run: npm install -g cordova@12
 
-      - name: Preparar proyecto
-        run: |
-          mkdir superfooty-build
-          cp config.xml superfooty-build/config.xml
-          cp -r www superfooty-build/www
-
       - name: Añadir Android
-        working-directory: superfooty-build
         run: cordova platform add android@13
 
       - name: Construir APK
-        working-directory: superfooty-build
         run: cordova build android --debug
 
       - name: Comprobar APK generada
         run: |
           echo "Buscando archivos APK..."
-          find superfooty-build/platforms/android -type f -name "*.apk"
+          find platforms/android -type f -name "*.apk"
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: SuperFooty-Pro-APK
-          path: superfooty-build/platforms/android/**/*.apk
+          path: platforms/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
           
