@@ -1,16 +1,10 @@
 {
-  "name": "SuperFooty Premium AI",
+  "name": "SuperFooty Pro",
   "short_name": "SuperFooty",
+  "description": "Análisis y estimaciones de fútbol con Gemini IA",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0a192f",
-  "theme_color": "#0a192f",
   "orientation": "portrait",
-  "icons": [
-    {
-      "src": "https://sirv.com",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#0b1220",
+  "theme_color": "#1e3a8a"
 }
