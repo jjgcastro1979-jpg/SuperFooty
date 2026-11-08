@@ -1,4 +1,4 @@
-: Construir APK SuperFooty Pro
+name: Generar APK Android
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Generar APK Android
+    name: Construir APK
     runs-on: ubuntu-latest
 
     steps:
@@ -33,13 +33,13 @@ jobs:
       - name: Instalar Cordova
         run: npm install -g cordova@12
 
-      - name: Preparar proyecto Android
+      - name: Preparar proyecto
         run: |
           mkdir superfooty-build
           cp config.xml superfooty-build/config.xml
           cp -r www superfooty-build/www
 
-      - name: Añadir plataforma Android
+      - name: Añadir Android
         working-directory: superfooty-build
         run: cordova platform add android@13
 
@@ -47,11 +47,16 @@ jobs:
         working-directory: superfooty-build
         run: cordova build android --debug
 
+      - name: Comprobar APK generada
+        run: |
+          echo "Buscando archivos APK..."
+          find superfooty-build/platforms/android -type f -name "*.apk"
+
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: SuperFooty-Pro-APK
-          path: superfooty-build/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          path: superfooty-build/platforms/android/**/*.apk
           if-no-files-found: error
           retention-days: 14
           
