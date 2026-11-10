@@ -284,6 +284,60 @@ async function analizarPartido(indice) {
 }
 
 // ==========================================
+// ABRIR GOOGLE MODO IA
+// ==========================================
+
+function abrirGoogleModoIA(indice) {
+  const p = (indice != null)
+    ? partidosActuales[indice]
+    : partidoSeleccionado;
+
+  if (!p) return;
+
+  let fecha = 'No indicada';
+  if (p.date) {
+    const d = new Date(p.date);
+    fecha = Number.isNaN(d.getTime())
+      ? 'No indicada'
+      : d.toLocaleString('es-ES', {
+          day: '2-digit',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+  }
+
+  const pregunta = `Analiza el partido ${p.home} contra ${p.away}.
+Competición: ${p.league || 'Fútbol'}.
+Fecha: ${fecha}.
+
+Investiga información actualizada y contrasta fuentes fiables.
+
+Analiza:
+1. Forma reciente de ambos equipos.
+2. Goles y ambos marcan.
+3. Córners de cada equipo y totales.
+4. Tarjetas de cada equipo y totales.
+5. Bajas y alineaciones, si están confirmadas.
+6. Mercados de apuestas y riesgos.
+
+Termina indicando el pronóstico con mejores argumentos,
+el mercado, la selección, los motivos y los riesgos.
+No inventes estadísticas ni porcentajes.
+Si no hay una opción suficientemente fundamentada,
+indica que no hay apuesta recomendada.`;
+
+  const url = 'https://www.google.com/search?udm=50&q=' +
+    encodeURIComponent(pregunta);
+
+  if (window.cordova && window.cordova.InAppBrowser) {
+    cordova.InAppBrowser.open(url, '_system');
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+// ==========================================
 // MOSTRAR RESULTADOS DEL ANÁLISIS
 // ==========================================
 
@@ -358,6 +412,13 @@ function mostrarAnalisis(a) {
         <p>${nota(a.verdict)}</p>
       </div>
 
+      <div class="botones-partido" style="margin-top:16px;">
+        <button class="btn btn-google" type="button"
+                onclick="abrirGoogleModoIA()">
+          ✨ CONTRASTAR CON GOOGLE MODO IA
+        </button>
+      </div>
+
       <div class="info-box warning">
         ⚠️ IMPORTANTE: son estimaciones orientativas generadas por IA.
         No son estadísticas oficiales, promedios históricos verificados
@@ -396,4 +457,3 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('deviceready', () => {
   comprobarConexion();
 }, false);
-         
