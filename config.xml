@@ -21,8 +21,12 @@
     <preference name="Fullscreen" value="false" />
     <preference name="SplashScreenDelay" value="0" />
 
+    <plugin name="cordova-plugin-inappbrowser" spec="6.0.0" />
+
     <platform name="android">
         <allow-intent href="market:*" />
+        <allow-intent href="https://*/*" />
+        <allow-intent href="http://*/*" />
         <preference name="AndroidLaunchMode" value="singleTop" />
     </platform>
 
