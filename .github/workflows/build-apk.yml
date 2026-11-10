@@ -33,8 +33,14 @@ jobs:
       - name: Instalar Cordova
         run: npm install -g cordova@12
 
+      - name: Instalar InAppBrowser
+        run: cordova plugin add cordova-plugin-inappbrowser@6.0.0
+
       - name: Añadir Android
         run: cordova platform add android@13
+
+      - name: Comprobar complementos
+        run: cordova plugin list
 
       - name: Construir APK
         run: cordova build android --debug
@@ -51,4 +57,3 @@ jobs:
           path: platforms/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
-          
